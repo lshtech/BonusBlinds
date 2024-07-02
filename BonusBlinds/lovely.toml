@@ -1,0 +1,52 @@
+[manifest]
+version = "1.0.0"
+dump_lua = true
+priority = 0
+
+[[patches]]
+[patches.pattern]
+target = 'functions/state_events.lua'
+pattern = '''G.GAME.round_resets.blind_states.Small = 'Defeated''''
+position = 'after'
+payload = '''elseif G.GAME.blind:get_type() == 'Bonus' then
+    bonus_reward(G.GAME.blind.config.bonus)'''
+match_indent = true
+
+[[patches]]
+[patches.pattern]
+target = 'blind.lua'
+pattern = '''elseif self.name == "Big Blind" then'''
+position = 'before'
+payload = '''elseif self.config.bonus then
+    return 'Bonus'
+'''
+match_indent = true
+
+[[patches]]
+[patches.pattern]
+target = 'blind.lua'
+pattern = 'function Blind:load(blindTable)'
+position = 'after'
+payload = '''self.config.bonus = blindTable.bonusy
+
+'''
+match_indent = true
+
+[[patches]]
+[patches.pattern]
+target = 'blind.lua'
+pattern = 'return blindTable'
+position = 'before'
+payload = '''blindTable.bonusy = self.config.bonus
+    '''
+match_indent = true
+
+[[patches]]
+[patches.pattern]
+target = 'blind.lua'
+pattern = 'function Blind:set_blind(blind, reset, silent)'
+position = 'after'
+payload = '''   if not reset then
+        self.config.bonus = nil
+    end'''
+match_indent = true
