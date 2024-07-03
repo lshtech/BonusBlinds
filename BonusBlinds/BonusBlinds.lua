@@ -276,6 +276,76 @@ SMODS.Bonus {
 }
 
 SMODS.Bonus {
+    key = 'magma',
+    loc_txt = {
+        name = "Magma Blind",
+        text = {
+            "Defeat {C:blue}#1#{} to",
+            "{C:attention}destroy{} cards {C:attention}held in hand{}"
+        }
+    },
+    atlas = "another",
+    pos = {x = 7, y = 0},
+    rarity = 'Rare',
+    set_ability = function(self, card, initial, delay_sprites)
+        card.ability.the_blind = 'bl_hook'
+        card.ability.reward = {burn_hand = true}
+    end,
+    loc_vars = function(self, info_queue, card)
+        return {vars = {localize{type ='name_text', key = card.ability.the_blind, set = 'Blind'}}}
+    end,
+    use = function(self, card, area, copier)
+        bonus_selection(card.ability.the_blind, card.ability.reward)
+    end,
+    can_use = function(self, card)
+        return (not not G.blind_select)
+    end
+}
+
+SMODS.Bonus {
+    key = 'spoiler',
+    loc_txt = {
+        name = "Spoiler Blind",
+        text = {
+            "Play {C:attention}Ante #1#s{} {C:attention}Showdown Blind{}",
+            "on this {C:attention}Ante{}"
+        }
+    },
+    atlas = "another",
+    pos = {x = 8, y = 0},
+    rarity = 'Uncommon',
+    set_ability = function(self, card, initial, delay_sprites)
+    end,
+    loc_vars = function(self, info_queue, card)
+        local showdown = (G.GAME.round_resets.ante and (G.GAME.win_ante + math.max(0, math.floor(G.GAME.round_resets.ante / G.GAME.win_ante) * G.GAME.win_ante))) or 8 
+        return {vars = {showdown}}
+    end,
+    use = function(self, card, area, copier)
+        local showdown = G.GAME.win_ante + math.max(0, math.floor(G.GAME.round_resets.ante / G.GAME.win_ante) * G.GAME.win_ante)
+        local blind = ""
+        if not G.GAME.forced_blinds or G.GAME.forced_blinds[showdown] == nil then
+            local rngpick = {}
+            for i, j in pairs(G.P_BLINDS) do
+                if j.boss and j.boss.showdown and not G.GAME.banned_keys[i] then
+                    table.insert(rngpick, i)
+                end
+            end
+            blind = pseudorandom_element(rngpick, pseudoseed('bonus'))
+            if G.GAME.forced_blinds == nil then
+                G.GAME.forced_blinds = {}
+            end
+            G.GAME.forced_blinds[showdown] = blind
+        else
+            blind = G.GAME.forced_blinds[showdown]
+        end
+        bonus_selection(blind, {none = true})
+    end,
+    can_use = function(self, card)
+        return (not not G.blind_select)
+    end
+}
+
+SMODS.Bonus {
     key = 'champion',
     loc_txt = {
         name = "Champion Blind",
@@ -508,6 +578,29 @@ function bonus_reward(bonusData)
         for i, j in ipairs(bonusData.tags) do
             add_tag(Tag(j))
         end
+    end
+end
+
+function bonus_end_of_round(bonusData)
+    if bonusData.burn_hand then
+        G.E_MANAGER:add_event(Event({
+            trigger = 'after',
+            delay = 0.1,
+            func = function() 
+                local i = #G.hand.cards
+                while (i >= 1) do
+                    local card = G.hand.cards[i]
+                    if card.ability.name == 'Glass Card' then 
+                        card:shatter()
+                    else
+                        card:start_dissolve(nil, i == #G.hand.cards)
+                    end
+                    i = i - 1
+                end
+                return true 
+            end 
+        }))
+        delay(0.5)
     end
 end
 
