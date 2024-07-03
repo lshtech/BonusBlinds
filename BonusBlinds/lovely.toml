@@ -8,8 +8,29 @@ priority = 0
 target = 'functions/state_events.lua'
 pattern = '''G.GAME.round_resets.blind_states.Small = 'Defeated''''
 position = 'after'
-payload = '''elseif G.GAME.blind:get_type() == 'Bonus' then
+payload = '''elseif bonuser then
     bonus_reward(G.GAME.blind.config.bonus)'''
+match_indent = true
+
+[[patches]]
+[patches.pattern]
+target = 'functions/state_events.lua'
+pattern = '''if G.GAME.round_resets.blind == G.P_BLINDS.bl_small then'''
+position = 'at'
+payload = '''if (bonuser == nil) and (G.GAME.round_resets.blind == G.P_BLINDS.bl_small) then'''
+match_indent = true
+overwrite = true
+
+[[patches]]
+[patches.pattern]
+target = 'functions/state_events.lua'
+pattern = '''G.FUNCS.draw_from_hand_to_discard()'''
+position = 'before'
+payload = '''local bonuser = nil
+if G.GAME.blind:get_type() == 'Bonus' then
+    bonuser = true
+    bonus_end_of_round(G.GAME.blind.config.bonus)
+end'''
 match_indent = true
 
 [[patches]]
@@ -49,4 +70,16 @@ position = 'after'
 payload = '''   if not reset then
         self.config.bonus = nil
     end'''
+match_indent = true
+
+[[patches]]
+[patches.pattern]
+target = 'functions/common_events.lua'
+pattern = 'if G.FORCE_BOSS then return G.FORCE_BOSS end'
+position = 'after'
+payload = '''if G.GAME.forced_blinds and G.GAME.forced_blinds[G.GAME.round_resets.ante] then
+    local blind = G.GAME.forced_blinds[G.GAME.round_resets.ante]
+    G.GAME.forced_blinds[G.GAME.round_resets.ante] = nil
+    return blind
+end'''
 match_indent = true
