@@ -83,3 +83,40 @@ payload = '''if G.GAME.forced_blinds and G.GAME.forced_blinds[G.GAME.round_reset
     return blind
 end'''
 match_indent = true
+
+[[patches]]
+[patches.pattern]
+target = 'blind.lua'
+pattern = '''if self.name == "The Hook" then'''
+position = 'before'
+payload = '''if G.GAME.blind.config.bonus and G.GAME.blind.config.bonus.spectrals then
+    G.E_MANAGER:add_event(Event({ func = function()
+        local card = create_card('Spectral',G.consumeables, nil, nil, nil, nil, nil, 'nature')
+        card:set_edition({negative = true}, true)
+        card:add_to_deck()
+        G.consumeables:emplace(card)
+    return true end })) 
+    delay(0.6)
+end'''
+match_indent = true
+
+[[patches]]
+[patches.pattern]
+target = 'card.lua'
+pattern = '''G.STATE = G.STATES.TAROT_PACK'''
+position = 'after'
+payload = '''G.GAME.pack_size = self.ability.extra
+elseif self.ability.name:find('Blind') then
+    G.STATE = G.STATES.BUFFOON_PACK'''
+match_indent = true
+
+[[patches]]
+[patches.pattern]
+target = 'card.lua'
+pattern = '''card = create_card("Tarot", G.pack_cards, nil, nil, true, true, nil, 'ar1')'''
+position = 'after'
+payload = '''end
+elseif self.ability.name:find('Blind') then
+if true then
+    card = create_card("Bonus", G.pack_cards, nil, nil, true, true, nil, 'buf')'''
+match_indent = true
