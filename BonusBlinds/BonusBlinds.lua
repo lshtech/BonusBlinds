@@ -37,6 +37,7 @@ SMODS.Booster = SMODS.GameObject:extend {
         if not self.taken_ownership then
             self.order = 32 + i
         end
+        G.P_CENTERS[self.key] = self
         SMODS.insert_pool(G.P_CENTER_POOLS[self.set], self)
     end,
     process_loc_text = function(self)
@@ -102,7 +103,8 @@ SMODS.Bonus = SMODS.Consumable:extend {
         else
             self:use2(card, area, copier)
         end
-    end
+    end,
+    cost = 2
 }
 
 SMODS.Atlas({ key = "mystery", atlas_table = "ASSET_ATLAS", path = "mystery.png", px = 71, py = 95})
@@ -285,6 +287,7 @@ SMODS.Bonus {
     },
     atlas = "another",
     pos = {x = 1, y = 0},
+    cost = 3,
     rarity = 'Uncommon',
     set_ability = function(self, card, initial, delay_sprites)
         card.ability.the_blind = 'bl_final_vessel'
@@ -309,6 +312,7 @@ SMODS.Bonus {
     },
     atlas = "another",
     pos = {x = 5, y = 0},
+    cost = 3,
     rarity = 'Uncommon',
     set_ability = function(self, card, initial, delay_sprites)
         card.ability.the_blind = 'bl_small'
@@ -352,6 +356,7 @@ SMODS.Bonus {
     },
     atlas = "another",
     pos = {x = 8, y = 0},
+    cost = 3,
     rarity = 'Uncommon',
     set_ability = function(self, card, initial, delay_sprites)
     end,
@@ -419,6 +424,7 @@ SMODS.Bonus {
     atlas = "another",
     pos = {x = 6, y = 0},
     rarity = 'Rare',
+    cost = 5,
     set_ability = function(self, card, initial, delay_sprites)
         card.ability.start_discards = 1
         card.ability.start_hands = 1
@@ -451,6 +457,7 @@ SMODS.Bonus {
     atlas = "another",
     pos = {x = 7, y = 0},
     rarity = 'Rare',
+    cost = 5,
     set_ability = function(self, card, initial, delay_sprites)
         card.ability.the_blind = 'bl_hook'
         card.ability.reward = {burn_hand = true}
@@ -477,6 +484,7 @@ SMODS.Bonus {
     atlas = "another",
     pos = {x = 4, y = 0},
     rarity = 'Legendary',
+    cost = 7,
     set_ability = function(self, card, initial, delay_sprites)
         card.ability.remove_ante = 2
     end,
@@ -512,6 +520,7 @@ SMODS.Bonus {
     atlas = "another",
     pos = {x = 10, y = 0},
     rarity = 'Legendary',
+    cost = 7,
     set_ability = function(self, card, initial, delay_sprites)
     end,
     loc_vars = function(self, info_queue, card)
@@ -644,7 +653,6 @@ SMODS.Booster {
     weight = 0.3,
     name = "Blind Pack",
     pos = {x = 0, y = 0},
-    discovered = true,
     config = {extra = 3, choose = 1, name = "Blind Pack"},
 }
 
@@ -661,7 +669,6 @@ SMODS.Booster {
     weight = 0.3,
     name = "Blind Pack",
     pos = {x = 1, y = 0},
-    discovered = true,
     config = {extra = 3, choose = 1, name = "Blind Pack"},
 }
 
@@ -676,9 +683,9 @@ SMODS.Booster {
         }
     },
     weight = 0.3,
+    cost = 6,
     name = "Jumbo Blind Pack",
     pos = {x = 0, y = 1},
-    discovered = true,
     config = {extra = 5, choose = 1, name = "Blind Pack"},
 }
 
@@ -693,9 +700,9 @@ SMODS.Booster {
         }
     },
     weight = 0.07,
+    cost = 8,
     name = "Mega Blind Pack",
     pos = {x = 1, y = 1},
-    discovered = true,
     config = {extra = 5, choose = 2, name = "Blind Pack"},
 }
 
