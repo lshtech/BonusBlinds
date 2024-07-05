@@ -564,7 +564,7 @@ SMODS.Tag {
     },
     pos = {x = 0, y = 0},
     apply = function(tag, context)
-        if context.type == 'immediate' then
+        if context.type == 'new_blind_choice' then
             local lock = tag.ID
             G.CONTROLLER.locks[lock] = true
             tag:yep('+', G.C.RED,function() 
@@ -581,7 +581,7 @@ SMODS.Tag {
             end)
         end
     end,
-    config = {type = 'immediate'}
+    config = {type = 'new_blind_choice'}
 }
 
 SMODS.Voucher {
