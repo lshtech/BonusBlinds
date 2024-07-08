@@ -8,52 +8,115 @@
 ----------------------------------------------
 ------------MOD CODE -------------------------
 
-SMODS.Boosters = {}
-SMODS.Booster = SMODS.GameObject:extend {
-    obj_table = SMODS.Boosters,
-    obj_buffer = {},
-    set = 'Booster',
-    cost = 4,
-    atlas = 'Booster',
-    discovered = false,
-    unlocked = true,
-    available = true,
-    config = {extra = 3, choose = 1, name = "Buffoon Pack"},
-    weight = 1,
-    pos = {x = 0, y = 0},
-    prefix = 'p',
-    required_params = {
-        'key',
-        'pos',
-        'config'
-    },
-    kind = 'Buffoon',
-    register = function(self)
-        self.name = self.name or self.key
-        G.P_CENTERS[self.key] = self
-        SMODS.Booster.super.register(self)
-    end,
-    inject = function(self, i)
-        if not self.taken_ownership then
-            self.order = 32 + i
-        end
-        G.P_CENTERS[self.key] = self
-        SMODS.insert_pool(G.P_CENTER_POOLS[self.set], self)
-    end,
-    process_loc_text = function(self)
-        SMODS.process_loc_text(G.localization.descriptions.Other, 'p_' .. self.key:lower(), self.loc_txt)
-    end,
-    get_obj = function(self, key) return G.P_CENTERS[key] end,
-    loc_vars = function(self, info_queue, card)
-        return {vars = {self.config.choose, self.config.extra}}
-    end,
-    generate_ui = function(self, info_queue, card, desc_nodes, specific_vars, full_UI_table)
-        if not full_UI_table.name then full_UI_table.name = localize{type = 'name', set = 'Other', key = 'p_' .. self.key:lower(), nodes = full_UI_table.name} end
-        localize{type = 'other', key = 'p_' .. self.key:lower(), nodes = desc_nodes, vars = self:loc_vars(info_queue, card).vars}
-    end
-}
-
 ---------------------------------------------------
+
+function disco_jokers()
+    if #G.jokers.cards > 1 then
+        local wiggle = {}
+        for i = #G.jokers.cards, 2, -1 do
+            local j = math.ceil(pseudorandom(pseudoseed('disco'))*i)
+            local e_swap = true
+            if G.jokers.cards[j].ability.eternal and not (G.jokers.cards[i].config.center.eternal_compat and not G.jokers.cards[i].ability.perishable) then
+                e_swap = false
+            end
+            if G.jokers.cards[i].ability.eternal and not (G.jokers.cards[j].config.center.eternal_compat and not G.jokers.cards[j].ability.perishable) then
+                e_swap = false
+            end
+            if (not not G.jokers.cards[i].ability.eternal) == (not not G.jokers.cards[j].ability.eternal) then
+                e_swap = false
+            end
+            local p_swap = true
+            if G.jokers.cards[j].ability.perishable and not (G.jokers.cards[i].config.center.perishable_compat and not G.jokers.cards[i].ability.eternal) then
+                p_swap = false
+            end
+            if G.jokers.cards[i].ability.perishable and not (G.jokers.cards[j].config.center.perishable_compat and not G.jokers.cards[j].ability.eternal) then
+                p_swap = false
+            end
+            if (not not G.jokers.cards[i].ability.perishable) == (not not G.jokers.cards[j].ability.perishable) then
+                p_swap = false
+            end
+            local ep_swap = true
+            if G.jokers.cards[j].ability.eternal and not G.jokers.cards[i].config.center.eternal_compat then
+                ep_swap = false
+            end
+            if G.jokers.cards[i].ability.eternal and not G.jokers.cards[j].config.center.eternal_compat then
+                ep_swap = false
+            end
+            if G.jokers.cards[j].ability.perishable and not G.jokers.cards[i].config.center.perishable_compat then
+                ep_swap = false
+            end
+            if G.jokers.cards[i].ability.perishable and not G.jokers.cards[j].config.center.perishable_compat then
+                ep_swap = false
+            end
+            if ((not not G.jokers.cards[i].ability.perishable) == (not not G.jokers.cards[j].ability.perishable)) and 
+            ((not not G.jokers.cards[i].ability.eternal) == (not not G.jokers.cards[j].ability.eternal)) then
+                ep_swap = false
+            end
+            if e_swap or p_swap or ep_swap then
+                local pool = {}
+                if e_swap then
+                    table.insert(pool, 'e')
+                end
+                if p_swap then
+                    table.insert(pool, 'p')
+                end
+                if ep_swap then
+                    table.insert(pool, 'ep')
+                end
+                local swap = pseudorandom_element(pool, pseudoseed('disco'))
+                if (swap == 'e') or (swap == 'ep') then
+                    local a, b = G.jokers.cards[i].ability.eternal, G.jokers.cards[j].ability.eternal
+                    G.jokers.cards[i].ability.eternal = b
+                    G.jokers.cards[j].ability.eternal = a
+                    wiggle[i] = true
+                    wiggle[j] = true
+                end
+                if (swap == 'p') or (swap == 'ep') then
+                    local a, b = G.jokers.cards[i].ability.perishable, G.jokers.cards[j].ability.perishable
+                    local c, d = G.jokers.cards[i].ability.perish_tally, G.jokers.cards[j].ability.perish_tally
+                    G.jokers.cards[i].ability.perishable = b
+                    G.jokers.cards[i].ability.perish_tally = d
+                    G.jokers.cards[j].ability.perishable = a
+                    G.jokers.cards[j].ability.perish_tally = c
+                    wiggle[i] = true
+                    wiggle[j] = true
+                end
+            end
+        end 
+        local rental_count = 0
+        for i = 1, #G.jokers.cards do
+            if G.jokers.cards[i].ability.rental == true then
+                rental_count = rental_count + 1
+            end
+        end
+        if (rental_count ~= 0) and (rental_count ~= #G.jokers.cards) then
+            rental_count = #G.jokers.cards - rental_count
+            local pool = {}
+            for i = 1, #G.jokers.cards do
+                pool[i] = true
+            end
+            for i = 1, rental_count do
+                local val, key = pseudorandom_element(pool, pseudoseed('disco'))
+                pool[key] = nil
+            end
+            for i = 1, #G.jokers.cards do
+                if (pool[i] == true) and (G.jokers.cards[i].ability.rental ~= true) then
+                    G.jokers.cards[i]:set_rental(true)
+                    wiggle[i] = true
+                elseif (pool[i] ~= true) and (G.jokers.cards[i].ability.rental == true) then
+                    G.jokers.cards[i]:set_rental(nil)
+                    wiggle[i] = true
+                end
+            end
+        end
+        for i, j in pairs(wiggle) do
+            G.jokers.cards[i]:juice_up()
+        end
+        if #wiggle > 0 then
+            play_sound('card1', 1)
+        end
+    end
+end
 
 local bonusType = SMODS.ConsumableType {
     key = 'Bonus',
@@ -119,13 +182,15 @@ SMODS.Atlas({ key = "vouchery", atlas_table = "ASSET_ATLAS", path = "vouchers.pn
 
 SMODS.Atlas({ key = "boostery", atlas_table = "ASSET_ATLAS", path = "boosters.png", px = 71, py = 95})
 
+SMODS.Atlas({ key = "jokery", atlas_table = "ASSET_ATLAS", path = "jokers.png", px = 71, py = 95})
+
 local unknown = SMODS.UndiscoveredSprite {
     key = 'Bonus',
     atlas = 'mystery',
     pos = {x = 0, y = 0}
 }
 
---- Common (5)
+--- Common (7)
 
 SMODS.Bonus {
     key = 'extra',
@@ -146,7 +211,7 @@ SMODS.Bonus {
         else
             local rngpick = {}
             for i, j in pairs(G.P_BLINDS) do
-                if j.boss and not j.boss.showdown then
+                if j.boss and not j.boss.showdown and not j.boss.bonus then
                     table.insert(rngpick, i)
                 end
             end
@@ -188,7 +253,7 @@ SMODS.Bonus {
     use2 =function(self, card, area, copier)
         local rngpick = {}
         for i, j in pairs(G.P_BLINDS) do
-            if j.boss and not j.boss.showdown and (i ~= 'bl_needle') then
+            if j.boss and not j.boss.showdown and (i ~= 'bl_needle') and not j.boss.bonus then
                 table.insert(rngpick, i)
             end
         end
@@ -218,7 +283,7 @@ SMODS.Bonus {
     use2 =function(self, card, area, copier)
         local rngpick = {}
         for i, j in pairs(G.P_BLINDS) do
-            if j.boss and not j.boss.showdown and (i ~= 'bl_water') then
+            if j.boss and not j.boss.showdown and (i ~= 'bl_water') and not j.boss.bonus then
                 table.insert(rngpick, i)
             end
         end
@@ -274,7 +339,84 @@ SMODS.Bonus {
     end
 }
 
---- Uncommon (3)
+SMODS.Bonus {
+    key = 'combo',
+    loc_txt = {
+        name = "Combo Blind",
+        text = {
+            "Play {C:blue}#1#{}. All {C:attention}Jokers{}",
+            "{C:attention}face down{} this blind."
+        }
+    },
+    atlas = "another",
+    pos = {x = 0, y = 1},
+    rarity = 'Common',
+    set_ability = function(self, card, initial, delay_sprites)
+        card.ability.the_blind = 'bl_final_heart'
+    end,
+    loc_vars = function(self, info_queue, card)
+        info_queue[#info_queue+1] = {key = 'bl_crimson', set = 'Other'}
+        return {vars = {localize{type ='name_text', key = card.ability.the_blind, set = 'Blind'}}}
+    end,
+    use2 =function(self, card, area, copier)
+        bonus_selection(card.ability.the_blind, {flip_jokers = true})
+    end
+}
+
+SMODS.Bonus {
+    key = 'brick',
+    loc_txt = {
+        name = "Brick Blind",
+        text = {
+            "Play a {C:attention}Boss Blind{}",
+            "with {C:blue}X#1# Blind Size{}"
+        }
+    },
+    atlas = "another",
+    pos = {x = 3, y = 1},
+    rarity = 'Common',
+    set_ability = function(self, card, initial, delay_sprites)
+        card.ability.reward = {blind_mult = 2}
+    end,
+    loc_vars = function(self, info_queue, card)
+        return {vars = {card.ability.reward.blind_mult}}
+    end,
+    use2 =function(self, card, area, copier)
+        local rngpick = {}
+        for i, j in pairs(G.P_BLINDS) do
+            if j.boss and not j.boss.showdown and not j.boss.bonus then
+                table.insert(rngpick, i)
+            end
+        end
+        local blind = pseudorandom_element(rngpick, pseudoseed('bonus'))
+        bonus_selection(blind, card.ability.reward)
+    end
+}
+
+SMODS.Bonus {
+    key = 'watching',
+    loc_txt = {
+        name = "Watching Blind",
+        text = {
+            "Play {C:green}#1#{}"
+        }
+    },
+    atlas = "another",
+    pos = {x = 5, y = 1},
+    rarity = 'Common',
+    set_ability = function(self, card, initial, delay_sprites)
+        card.ability.the_blind = 'bl_bb_watch'
+    end,
+    loc_vars = function(self, info_queue, card)
+        info_queue[#info_queue+1] = {key = 'bl_watch', set = 'Other'}
+        return {vars = {localize{type ='name_text', key = card.ability.the_blind, set = 'Blind'}}}
+    end,
+    use2 =function(self, card, area, copier)
+        bonus_selection(card.ability.the_blind, {none = true})
+    end
+}
+
+--- Uncommon (5)
 
 SMODS.Bonus {
     key = 'redo',
@@ -294,6 +436,7 @@ SMODS.Bonus {
         card.ability.reward = {tags = {'tag_boss'}, blind_mult = 3}
     end,
     loc_vars = function(self, info_queue, card)
+        info_queue[#info_queue+1] = {key = 'bl_violet', set = 'Other'}
         return {vars = {localize{type ='name_text', key = card.ability.the_blind, set = 'Blind'}, localize{type ='name_text', key = card.ability.reward.tags[1], set = 'Tag'}}}
     end,
     use2 =function(self, card, area, copier)
@@ -372,7 +515,7 @@ SMODS.Bonus {
         elseif not G.GAME.forced_blinds or G.GAME.forced_blinds[showdown] == nil then
             local rngpick = {}
             for i, j in pairs(G.P_BLINDS) do
-                if j.boss and j.boss.showdown and not G.GAME.banned_keys[i] then
+                if j.boss and j.boss.showdown and not G.GAME.banned_keys[i] and not j.boss.bonus then
                     table.insert(rngpick, i)
                 end
             end
@@ -409,7 +552,105 @@ SMODS.Bonus {
     end
 }
 
---- Rare (2)
+SMODS.Bonus {
+    key = 'meta',
+    loc_txt = {
+        name = "Meta Blind",
+        text = {
+            "Activate a {C:red}Common Bonus Blind{}. Upon",
+            "blind defeat, get an {C:attention}#1#{}"
+        }
+    },
+    atlas = "another",
+    pos = {x = 2, y = 1},
+    cost = 3,
+    rarity = 'Uncommon',
+    set_ability = function(self, card, initial, delay_sprites)
+        card.ability.reward = {tags = {'tag_bb_ironic'}}
+    end,
+    loc_vars = function(self, info_queue, card)
+        info_queue[#info_queue+1] = {key = 't_irony', set = 'Other'}
+        info_queue[#info_queue+1] = {key = 'p_jumbo_bl', set = 'Other'}
+        return {vars = {localize{type ='name_text', key = card.ability.reward.tags[1], set = 'Tag'}}}
+    end,
+    use2 =function(self, card, area, copier)
+        local commons = {'extra', 'needy', 'sail', 'locked', 'fixed', 'combo', 'brick', 'watching'}
+        local common = pseudorandom_element(commons, pseudoseed('meta'))
+        if common == 'extra' then
+            local rngpick = {}
+            for i, j in pairs(G.P_BLINDS) do
+                if j.boss and not j.boss.showdown and not j.boss.bonus then
+                    table.insert(rngpick, i)
+                end
+            end
+            local blind = pseudorandom_element(rngpick, pseudoseed('bonus'))
+            bonus_selection(blind, {tags = card.ability.reward.tags})
+            ease_dollars(-math.floor(1.5*G.P_BLINDS[blind].dollars))
+        elseif common == 'needy' then
+            local rngpick = {}
+            for i, j in pairs(G.P_BLINDS) do
+                if j.boss and not j.boss.showdown and not j.boss.bonus and (i ~= 'bl_needle') then
+                    table.insert(rngpick, i)
+                end
+            end
+            local blind = pseudorandom_element(rngpick, pseudoseed('bonus'))
+            bonus_selection(blind, {hands = 1, tags = card.ability.reward.tags})
+        elseif common == 'sail' then
+            local rngpick = {}
+            for i, j in pairs(G.P_BLINDS) do
+                if j.boss and not j.boss.showdown and (i ~= 'bl_water') and not j.boss.bonus then
+                    table.insert(rngpick, i)
+                end
+            end
+            local blind = pseudorandom_element(rngpick, pseudoseed('bonus'))
+            bonus_selection(blind, {discards = 0, tags = card.ability.reward.tags})
+        elseif common == 'locked' then
+            bonus_selection('bl_big', {hand_size = -2, tags = card.ability.reward.tags})
+        elseif common == 'fixed' then
+            bonus_selection('bl_small', {pin_jokers = true, tags = card.ability.reward.tags})
+        elseif common == 'combo' then
+            bonus_selection('bl_final_heart', {flip_jokers = true, tags = card.ability.reward.tags})
+        elseif common == 'brick' then
+            local rngpick = {}
+            for i, j in pairs(G.P_BLINDS) do
+                if j.boss and not j.boss.showdown and not j.boss.bonus then
+                    table.insert(rngpick, i)
+                end
+            end
+            local blind = pseudorandom_element(rngpick, pseudoseed('bonus'))
+            bonus_selection(blind, {blind_mult = 2, tags = card.ability.reward.tags})
+        elseif common == 'watching' then
+            bonus_selection('bl_bb_watch', {tags = card.ability.reward.tags})
+        end
+    end
+}
+
+SMODS.Bonus {
+    key = 'disco',
+    loc_txt = {
+        name = "Disco Blind",
+        text = {
+            "Play {C:blue}#1#{}. Shuffle",
+            "{C:attention}Stickers{} each {C:blue}hand{}"
+        }
+    },
+    atlas = "another",
+    pos = {x = 4, y = 1},
+    cost = 3,
+    rarity = 'Uncommon',
+    set_ability = function(self, card, initial, delay_sprites)
+        card.ability.the_blind = 'bl_final_bell'
+    end,
+    loc_vars = function(self, info_queue, card)
+        info_queue[#info_queue+1] = {key = 'bl_cerulean', set = 'Other'}
+        return {vars = {localize{type ='name_text', key = card.ability.the_blind, set = 'Blind'}}}
+    end,
+    use2 =function(self, card, area, copier)
+        bonus_selection(card.ability.the_blind, {disco = true})
+    end
+}
+
+--- Rare (3)
 
 SMODS.Bonus {
     key = 'luck',
@@ -431,12 +672,13 @@ SMODS.Bonus {
         card.ability.reward = {tags = {'tag_voucher', 'tag_voucher'}}
     end,
     loc_vars = function(self, info_queue, card)
+        info_queue[#info_queue+1] = {key = 'tag_voucher', set = 'Tag'}
         return {vars = {card.ability.start_hands, card.ability.start_discards, 2, localize{type ='name_text', key = card.ability.reward.tags[1], set = 'Tag'}}}
     end,
     use2 = function(self, card, area, copier)
         local rngpick = {}
         for i, j in pairs(G.P_BLINDS) do
-            if not j.boss or not j.boss.showdown then
+            if (not j.boss or not j.boss.showdown) and not (j.boss and j.boss.bonus) then
                 table.insert(rngpick, i)
             end
         end
@@ -463,11 +705,39 @@ SMODS.Bonus {
         card.ability.reward = {burn_hand = true}
     end,
     loc_vars = function(self, info_queue, card)
+        info_queue[#info_queue+1] = {key = 'bl_snatch', set = 'Other'}
         return {vars = {localize{type ='name_text', key = card.ability.the_blind, set = 'Blind'}}}
     end,
     use2 = function(self, card, area, copier)
         bonus_selection(card.ability.the_blind, card.ability.reward)
     end,
+}
+
+SMODS.Bonus {
+    key = 'lottery',
+    loc_txt = {
+        name = "Lottery Blind",
+        text = {
+            "Add {C:red}+#1#{} Mult to {C:attention}#2#{} random",
+            "{C:attention}playing card{} then play {C:attention}#3#{}"
+        }
+    },
+    atlas = "another",
+    pos = {x = 1, y = 1},
+    cost = 3,
+    rarity = 'Rare',
+    set_ability = function(self, card, initial, delay_sprites)
+        card.ability.the_blind = 'bl_flint'
+        card.ability.mult = 25
+        card.ability.cards = 1
+    end,
+    loc_vars = function(self, info_queue, card)
+        info_queue[#info_queue+1] = {key = 'bl_rocky', set = 'Other'}
+        return {vars = {card.ability.mult, card.ability.cards, localize{type ='name_text', key = card.ability.the_blind, set = 'Blind'}}}
+    end,
+    use2 =function(self, card, area, copier)
+        bonus_selection(card.ability.the_blind, {lotto = {amount = card.ability.mult, cards = card.ability.cards}})
+    end
 }
 
 --- Legendary (2)
@@ -494,7 +764,7 @@ SMODS.Bonus {
     use2 =function(self, card, area, copier)
         local rngpick = {}
         for i, j in pairs(G.P_BLINDS) do
-            if j.boss and j.boss.showdown then
+            if j.boss and j.boss.showdown and not j.boss.bonus then
                 table.insert(rngpick, i)
             end
         end
@@ -524,7 +794,10 @@ SMODS.Bonus {
     set_ability = function(self, card, initial, delay_sprites)
     end,
     loc_vars = function(self, info_queue, card)
-        return {vars = {card.ability.remove_ante}}
+        info_queue[#info_queue+1] = {key = 'bl_snake', set = 'Other'}
+        info_queue[#info_queue+1] = {key = 'eternal', set = 'Other'}
+        info_queue[#info_queue+1] = {key = 'ed_negative_consumable', set = 'Other'}
+        return {vars = {}}
     end,
     use2 =function(self, card, area, copier)
         bonus_selection('bl_serpent', {eternal_round = true, spectrals = true})
@@ -533,6 +806,8 @@ SMODS.Bonus {
         return (not not G.blind_select)
     end
 }
+
+-----------------
 
 SMODS.Spectral {
     key = 'loop',
@@ -585,10 +860,15 @@ SMODS.Tag {
                 G.FUNCS.use_card({config = {ref_table = card}})
                 card:start_materialize()
                 G.CONTROLLER.locks[lock] = nil
-                G.CONTROLLER.locks[lock] = nil
                 return true
             end)
+            tag.triggered = true
+            return true
         end
+    end,
+    loc_vars = function(self, info_queue, tag)
+        info_queue[#info_queue+1] = {key = 'p_jumbo_bl', set = 'Other'}
+        return {}
     end,
     config = {type = 'new_blind_choice'}
 }
@@ -640,9 +920,27 @@ SMODS.Voucher {
     end
 }
 
+SMODS.Joker {
+    key = 'change',
+    name = "Loose Change",
+    loc_txt = {
+        name = "Loose Change",
+        text = {
+            "{C:attention}Bonus Blinds{} give",
+            "reward money."
+        }
+    },
+    rarity = 2,
+    atlas = 'jokery',
+    pos = {x = 0, y = 0},
+    cost = 7,
+    blueprint_compat = false
+}
+
 SMODS.Booster {
    key = 'blind_normal_1',
    atlas = 'boostery',
+   group_key = 'k_blind_pack',
    loc_txt = {
         name = "Blind Pack",
         text = {
@@ -654,11 +952,15 @@ SMODS.Booster {
     name = "Blind Pack",
     pos = {x = 0, y = 0},
     config = {extra = 3, choose = 1, name = "Blind Pack"},
+    create_card = function(self, card)
+        return create_card("Bonus", G.pack_cards, nil, nil, true, true, nil, 'blind')
+    end
 }
 
 SMODS.Booster {
    key = 'blind_normal_2',
    atlas = 'boostery',
+   group_key = 'k_blind_pack',
    loc_txt = {
         name = "Blind Pack",
         text = {
@@ -670,11 +972,15 @@ SMODS.Booster {
     name = "Blind Pack",
     pos = {x = 1, y = 0},
     config = {extra = 3, choose = 1, name = "Blind Pack"},
+    create_card = function(self, card)
+        return create_card("Bonus", G.pack_cards, nil, nil, true, true, nil, 'blind')
+    end
 }
 
 SMODS.Booster {
    key = 'blind_jumbo_1',
    atlas = 'boostery',
+   group_key = 'k_blind_pack',
    loc_txt = {
     name = "Jumbo Blind Pack",
         text = {
@@ -687,11 +993,15 @@ SMODS.Booster {
     name = "Jumbo Blind Pack",
     pos = {x = 0, y = 1},
     config = {extra = 5, choose = 1, name = "Blind Pack"},
+    create_card = function(self, card)
+        return create_card("Bonus", G.pack_cards, nil, nil, true, true, nil, 'blind')
+    end
 }
 
 SMODS.Booster {
    key = 'blind_mega_1',
    atlas = 'boostery',
+   group_key = 'k_blind_pack',
    loc_txt = {
         name = "Mega Blind Pack",
         text = {
@@ -704,7 +1014,70 @@ SMODS.Booster {
     name = "Mega Blind Pack",
     pos = {x = 1, y = 1},
     config = {extra = 5, choose = 2, name = "Blind Pack"},
+    create_card = function(self, card)
+        return create_card("Bonus", G.pack_cards, nil, nil, true, true, nil, 'blind')
+    end,
+    ease_background_colour = function(self)
+        ease_colour(G.C.DYN_UI.MAIN, mix_colours(G.C.RED, G.C.BLACK, 0.9))
+        ease_background_colour{new_colour = G.C.FILTER, special_colour = G.C.BLACK, contrast = 2}
+    end,
 }
+
+----- Blinds ---
+
+SMODS.Atlas({ key = "blinds", atlas_table = "ANIMATION_ATLAS", path = "blinds.png", px = 34, py = 34, frames = 21 })
+
+SMODS.Blind {
+    loc_txt = {
+        name = 'The Watch',
+        text = { 'The Eye and Psychic', 'simultaneously' }
+    },
+    key = 'watch',
+    name = 'The Jaw',
+    config = {},
+    boss = {min = 1, max = 10, bonus = true},
+    boss_colour = HEX("008A19"),
+    atlas = "blinds",
+    pos = { x = 0, y = 0},
+    vars = {},
+    dollars = 5,
+    mult = 2,
+    set_blind = function(self)
+        G.GAME.blind.hands = {
+            ["Flush Five"] = false,
+            ["Flush House"] = false,
+            ["Five of a Kind"] = false,
+            ["Straight Flush"] = false,
+            ["Four of a Kind"] = false,
+            ["Full House"] = false,
+            ["Flush"] = false,
+            ["Straight"] = false,
+            ["Three of a Kind"] = false,
+            ["Two Pair"] = false,
+            ["Pair"] = false,
+            ["High Card"] = false,
+        }
+    end,
+    debuff_hand = function(self, cards, hand, handname, check)
+        if #cards < 5 then
+            G.GAME.blind.triggered = true
+            return true
+        end
+        if G.GAME.blind.hands[handname] then
+            G.GAME.blind.triggered = true
+            return true
+        end
+        if not check then G.GAME.blind.hands[handname] = true end
+    end,
+    get_loc_debuff_text = function(self)
+        return "Must play 5 Cards and no repeat hand types this round"
+    end,
+    in_pool = function(self)
+        return false
+    end
+}
+
+----------------
 
 function bonus_new_round(theBlind, bonusData)
     G.RESET_JIGGLES = nil
@@ -753,8 +1126,10 @@ function bonus_new_round(theBlind, bonusData)
             G.GAME.blind:set_blind(G.P_BLINDS[theBlind])
             G.GAME.blind.config.bonus = bonusData
             G.GAME.last_blind.boss = nil
-            G.GAME.blind.dollars = 0
-            G.GAME.current_round.dollars_to_be_earned = ''
+            if not next(SMODS.find_card("j_bb_change")) then
+                G.GAME.blind.dollars = 0
+                G.GAME.current_round.dollars_to_be_earned = ''
+            end
             G.HUD_blind.alignment.offset.y = -10
             G.HUD_blind:recalculate(false)
             bonus_start_effect(bonusData)
@@ -898,6 +1273,28 @@ function bonus_start_effect(bonusData)
             return true
         end}))
     end
+    if bonusData.flip_jokers then
+        for i, j in ipairs(G.jokers.cards) do
+            j:flip()
+        end
+        G.E_MANAGER:add_event(Event({ func = function() play_sound('card1',  0.85);return true end }))
+    end
+    if bonusData.lotto then
+        local pool = {}
+        local chosen = {}
+        for i, j in pairs(G.playing_cards) do
+            table.insert(pool, j)
+        end
+        for i = 1, bonusData.lotto.cards do
+            local card, key = pseudorandom_element(G.playing_cards, pseudoseed('lottery'))
+            table.remove(pool, key)
+            table.insert(chosen, card)
+        end
+        for i, j in pairs(chosen) do
+            j.ability.perma_bonus_mult = j.ability.perma_bonus_mult or 0
+            j.ability.perma_bonus_mult = j.ability.perma_bonus_mult + bonusData.lotto.amount
+        end
+    end
 end
 
 function bonus_reward(bonusData)
@@ -905,6 +1302,12 @@ function bonus_reward(bonusData)
         for i, j in ipairs(bonusData.tags) do
             add_tag(Tag(j))
         end
+    end
+    if bonusData.flip_jokers then
+        for i, j in ipairs(G.jokers.cards) do
+            j:flip()
+        end
+        G.E_MANAGER:add_event(Event({ func = function() play_sound('card1',  0.85);return true end }))
     end
 end
 
@@ -953,6 +1356,46 @@ function bonus_end_of_round(bonusData)
             return true
         end}))
     end
+end
+
+function SMODS.current_mod.process_loc_text()
+    G.localization.descriptions.Other["card_extra_mult"] = 
+    {
+        text = {
+            "{C:red}+#1#{} extra mult"
+        }
+    }
+    G.localization.misc.dictionary["k_blind_pack"] = "Blind Pack"
+    G.localization.descriptions.Other["bl_watch"] = {}
+    G.localization.descriptions.Other["bl_watch"].text = { 'Must Plau 5 cards.', 'No repeat hand', 'types this round.' }
+    G.localization.descriptions.Other["bl_watch"].name = "The Watch"
+    G.localization.descriptions.Other["bl_crimson"] = {}
+    G.localization.descriptions.Other["bl_crimson"].name = localize{type ='name_text', key = 'bl_final_heart', set = 'Blind'}
+    G.localization.descriptions.Other["bl_crimson"].text = localize{type = 'raw_descriptions', key = 'bl_final_heart', set = 'Blind', vars = {}}
+    G.localization.descriptions.Other["bl_violet"] = {}
+    G.localization.descriptions.Other["bl_violet"].name = localize{type ='name_text', key = 'bl_final_vessel', set = 'Blind'}
+    G.localization.descriptions.Other["bl_violet"].text = localize{type = 'raw_descriptions', key = 'bl_final_vessel', set = 'Blind', vars = {}}
+    G.localization.descriptions.Other["t_irony"] = {}
+    G.localization.descriptions.Other["t_irony"].name = "Ironic Tag"
+    G.localization.descriptions.Other["t_irony"].text = { "Gives a free", "{C:red}Jumbo Blind Pack"}
+    G.localization.descriptions.Other["p_jumbo_bl"] = {}
+    G.localization.descriptions.Other["p_jumbo_bl"].name = "Jumbo Blind Pack"
+    G.localization.descriptions.Other["p_jumbo_bl"].text = { "Choose {C:attention}1{} of up to", "{C:attention}5{C:red} Bonus Blinds{}"}
+    G.localization.descriptions.Other["bl_cerulean"] = {}
+    G.localization.descriptions.Other["bl_cerulean"].name = localize{type ='name_text', key = 'bl_final_bell', set = 'Blind'}
+    G.localization.descriptions.Other["bl_cerulean"].text = localize{type = 'raw_descriptions', key = 'bl_final_bell', set = 'Blind', vars = {}}
+    G.localization.descriptions.Other["bl_snatch"] = {}
+    G.localization.descriptions.Other["bl_snatch"].name = localize{type ='name_text', key = 'bl_hook', set = 'Blind'}
+    G.localization.descriptions.Other["bl_snatch"].text = localize{type = 'raw_descriptions', key = 'bl_hook', set = 'Blind', vars = {}}
+    G.localization.descriptions.Other["bl_rocky"] = {}
+    G.localization.descriptions.Other["bl_rocky"].name = localize{type ='name_text', key = 'bl_flint', set = 'Blind'}
+    G.localization.descriptions.Other["bl_rocky"].text = localize{type = 'raw_descriptions', key = 'bl_flint', set = 'Blind', vars = {}}
+    G.localization.descriptions.Other["bl_snake"] = {}
+    G.localization.descriptions.Other["bl_snake"].name = localize{type ='name_text', key = 'bl_serpent', set = 'Blind'}
+    G.localization.descriptions.Other["bl_snake"].text = localize{type = 'raw_descriptions', key = 'bl_serpent', set = 'Blind', vars = {}}
+    G.localization.descriptions.Other["ed_negative_consumable"] = {}
+    G.localization.descriptions.Other["ed_negative_consumable"].name = localize{type ='name_text', key = 'e_negative_consumable', set = 'Edition'}
+    G.localization.descriptions.Other["ed_negative_consumable"].text = localize{type = 'raw_descriptions', key = 'e_negative_consumable', set = 'Edition', vars = {1}}
 end
 
 ----------------------------------------------

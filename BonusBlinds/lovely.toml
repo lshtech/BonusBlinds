@@ -8,7 +8,7 @@ priority = 0
 target = 'functions/state_events.lua'
 pattern = '''G.GAME.round_resets.blind_states.Small = 'Defeated''''
 position = 'after'
-payload = '''elseif bonuser then
+payload = '''elseif (bonuser == true) then
     bonus_reward(G.GAME.blind.config.bonus)'''
 match_indent = true
 
@@ -17,7 +17,7 @@ match_indent = true
 target = 'functions/state_events.lua'
 pattern = '''if G.GAME.round_resets.blind == G.P_BLINDS.bl_small then'''
 position = 'at'
-payload = '''if (bonuser == nil) and (G.GAME.round_resets.blind == G.P_BLINDS.bl_small) then'''
+payload = '''if (bonuser ~= true) and (G.GAME.round_resets.blind == G.P_BLINDS.bl_small) then'''
 match_indent = true
 overwrite = true
 
@@ -26,7 +26,7 @@ overwrite = true
 target = 'functions/state_events.lua'
 pattern = '''G.FUNCS.draw_from_hand_to_discard()'''
 position = 'before'
-payload = '''local bonuser = nil
+payload = '''local bonuser = false
 if G.GAME.blind:get_type() == 'Bonus' then
     bonuser = true
     bonus_end_of_round(G.GAME.blind.config.bonus)
@@ -87,36 +87,78 @@ match_indent = true
 [[patches]]
 [patches.pattern]
 target = 'blind.lua'
-pattern = '''if self.name == "The Hook" then'''
+pattern = '''function Blind:press_play()'''
+position = 'after'
+payload = '''   if G.GAME.blind.config.bonus and G.GAME.blind.config.bonus.spectrals then
+        G.E_MANAGER:add_event(Event({ func = function()
+            local card = create_card('Spectral',G.consumeables, nil, nil, nil, nil, nil, 'nature')
+            card:set_edition({negative = true}, true)
+            card:add_to_deck()
+            G.consumeables:emplace(card)
+        return true end })) 
+        delay(0.6)
+    end'''
+match_indent = true
+
+[[patches]]
+[patches.pattern]
+target = 'blind.lua'
+pattern = '''_card:juice_up()'''
+position = 'at'
+payload = '''if (not self.config.bonus) or (not self.config.bonus.flip_jokers) then _card:juice_up() end'''
+match_indent = true
+overwrite = true
+
+[[patches]]
+[patches.pattern]
+target = 'card.lua'
+pattern = '''return self.ability.mult'''
+position = 'at'
+payload = '''return self.ability.mult + (self.ability.perma_bonus_mult or 0)'''
+match_indent = true
+overwrite = true
+
+[[patches]]
+[patches.pattern]
+target = 'functions/common_events.lua'
+pattern = '''elseif _c.set == 'Enhanced' then'''
 position = 'before'
-payload = '''if G.GAME.blind.config.bonus and G.GAME.blind.config.bonus.spectrals then
-    G.E_MANAGER:add_event(Event({ func = function()
-        local card = create_card('Spectral',G.consumeables, nil, nil, nil, nil, nil, 'nature')
-        card:set_edition({negative = true}, true)
-        card:add_to_deck()
-        G.consumeables:emplace(card)
-    return true end })) 
-    delay(0.6)
+payload = '''if specific_vars and specific_vars.bonus_mult then
+    localize{type = 'other', key = 'card_extra_mult', nodes = desc_nodes, vars = {specific_vars.bonus_mult}}
+end'''
+match_indent = true
+
+[[patches]]
+[patches.pattern]
+target = 'functions/common_events.lua'
+pattern = '''elseif _c.set == 'Booster' then'''
+position = 'before'
+payload = '''if specific_vars and specific_vars.bonus_mult then
+    localize{type = 'other', key = 'card_extra_mult', nodes = desc_nodes, vars = {specific_vars.bonus_mult}}
 end'''
 match_indent = true
 
 [[patches]]
 [patches.pattern]
 target = 'card.lua'
-pattern = '''G.STATE = G.STATES.TAROT_PACK'''
+pattern = '''bonus_chips = (self.ability.bonus + (self.ability.perma_bonus or 0)) > 0 and (self.ability.bonus + (self.ability.perma_bonus or 0)) or nil,'''
 position = 'after'
-payload = '''G.GAME.pack_size = self.ability.extra
-elseif self.ability.name:find('Blind') then
-    G.STATE = G.STATES.BUFFOON_PACK'''
+payload = '''bonus_mult = ((self.ability.perma_bonus_mult or 0) > 0) and self.ability.perma_bonus_mult or nil,'''
 match_indent = true
 
 [[patches]]
 [patches.pattern]
-target = 'card.lua'
-pattern = '''card = create_card("Tarot", G.pack_cards, nil, nil, true, true, nil, 'ar1')'''
+target = 'blind.lua'
+pattern = '''if self.name == "Small Blind" then'''
+position = 'at'
+payload = '''if (self.name == "Small Blind") and not (self.config.bonus) then'''
+match_indent = true
+overwrite = true
+
+[[patches]]
+[patches.pattern]
+target = 'blind.lua'
+pattern = '''function Blind:drawn_to_hand()'''
 position = 'after'
-payload = '''end
-elseif self.ability.name:find('Blind') then
-if true then
-    card = create_card("Bonus", G.pack_cards, nil, nil, true, true, nil, 'buf')'''
+payload = '''   if G.GAME.blind.config.bonus and G.GAME.blind.config.bonus.disco then disco_jokers() end'''
 match_indent = true
