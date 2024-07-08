@@ -1033,7 +1033,7 @@ SMODS.Blind {
         text = { 'The Eye and Psychic', 'simultaneously' }
     },
     key = 'watch',
-    name = 'The Jaw',
+    name = 'The Watch',
     config = {},
     boss = {min = 1, max = 10, bonus = true},
     boss_colour = HEX("008A19"),
