@@ -184,13 +184,15 @@ SMODS.Atlas({ key = "boostery", atlas_table = "ASSET_ATLAS", path = "boosters.pn
 
 SMODS.Atlas({ key = "jokery", atlas_table = "ASSET_ATLAS", path = "jokers.png", px = 71, py = 95})
 
+SMODS.Atlas({ key = "decks", atlas_table = "ASSET_ATLAS", path = "Backs.png", px = 71, py = 95})
+
 local unknown = SMODS.UndiscoveredSprite {
     key = 'Bonus',
     atlas = 'mystery',
     pos = {x = 0, y = 0}
 }
 
---- Common (7)
+--- Common (10)
 
 SMODS.Bonus {
     key = 'extra',
@@ -416,7 +418,64 @@ SMODS.Bonus {
     end
 }
 
---- Uncommon (5)
+SMODS.Bonus {
+    key = 'sky',
+    loc_txt = {
+        name = "Sky-High Blind",
+        text = {
+            "Play {C:blue}#1#{} with {C:attention}double{}",
+            "your {C:attention}best hand{} added to {C:blue}Blind Size{}",
+            "{C:inactive}(Best Hand:{}{C:attention} #2#{}{C:inactive}){}"
+        }
+    },
+    atlas = "another",
+    pos = {x = 7, y = 1},
+    rarity = 'Common',
+    set_ability = function(self, card, initial, delay_sprites)
+        card.ability.the_blind = 'bl_small'
+    end,
+    loc_vars = function(self, info_queue, card)
+        local best = (G.GAME and G.GAME.round_scores and G.GAME.round_scores.hand.amt) or 0
+        best = number_format(best)
+        return {vars = {localize{type ='name_text', key = card.ability.the_blind, set = 'Blind'}, best}}
+    end,
+    use2 =function(self, card, area, copier)
+        bonus_selection(card.ability.the_blind, {blind_size_mod = ((G.GAME and G.GAME.round_scores and G.GAME.round_scores.hand.amt) or 0)})
+    end
+}
+
+SMODS.Bonus {
+    key = 'cruel',
+    loc_txt = {
+        name = "Cruel Blind",
+        text = {
+            "Play a {C:attention}Boss Blind{} with",
+            "at least {C:attention}#1#{} empty {C:attention}Joker Slot{}",
+            "{C:inactive}(can destroy jokers){}"
+        }
+    },
+    atlas = "another",
+    pos = {x = 8, y = 1},
+    rarity = 'Common',
+    set_ability = function(self, card, initial, delay_sprites)
+        card.ability.emp_jkr = 1
+    end,
+    loc_vars = function(self, info_queue, card)
+        return {vars = {card.ability.emp_jkr}}
+    end,
+    use2 =function(self, card, area, copier)
+        local rngpick = {}
+        for i, j in pairs(G.P_BLINDS) do
+            if j.boss and not j.boss.showdown and not j.boss.bonus then
+                table.insert(rngpick, i)
+            end
+        end
+        local blind = pseudorandom_element(rngpick, pseudoseed('bonus'))
+        bonus_selection(blind, {emp_jkr = card.ability.emp_jkr})
+    end
+}
+
+--- Uncommon (6)
 
 SMODS.Bonus {
     key = 'redo',
@@ -467,6 +526,7 @@ SMODS.Bonus {
         if pseudorandom("broken") < G.GAME.probabilities.normal/2 then
             bonus_selection(card.ability.the_blind, {none = 1})
         else
+            G.GAME.pool_flags.failed_broken_blind = true
             G.E_MANAGER:add_event(Event({trigger = 'after', delay = 0.4, func = function()
                 attention_text({
                     text = localize('k_nope_ex'),
@@ -574,7 +634,7 @@ SMODS.Bonus {
         return {vars = {localize{type ='name_text', key = card.ability.reward.tags[1], set = 'Tag'}}}
     end,
     use2 =function(self, card, area, copier)
-        local commons = {'extra', 'needy', 'sail', 'locked', 'fixed', 'combo', 'brick', 'watching'}
+        local commons = {'extra', 'needy', 'sail', 'locked', 'fixed', 'combo', 'brick', 'watching', 'sky'}
         local common = pseudorandom_element(commons, pseudoseed('meta'))
         if common == 'extra' then
             local rngpick = {}
@@ -621,6 +681,9 @@ SMODS.Bonus {
             bonus_selection(blind, {blind_mult = 2, tags = card.ability.reward.tags})
         elseif common == 'watching' then
             bonus_selection('bl_bb_watch', {tags = card.ability.reward.tags})
+        elseif common == 'sky' then
+            local best = (G.GAME and G.GAME.round_scores and G.GAME.round_scores.hand.amt) or 0
+            bonus_selection('bl_small', {blind_size_mod = best, tags = card.ability.reward.tags})
         end
     end
 }
@@ -647,6 +710,79 @@ SMODS.Bonus {
     end,
     use2 =function(self, card, area, copier)
         bonus_selection(card.ability.the_blind, {disco = true})
+    end
+}
+
+SMODS.Bonus {
+    key = 'rewind',
+    loc_txt = {
+        name = "Rewind Blind",
+        text = {
+            "Play the last {C:attention}blind{}",
+            "with {C:blue}X2 Hands{}"
+        }
+    },
+    atlas = "another",
+    pos = {x = 6, y = 1},
+    cost = 3,
+    rarity = 'Uncommon',
+    set_ability = function(self, card, initial, delay_sprites)
+    end,
+    loc_vars = function(self, info_queue, card)
+        return {vars = {}}
+    end,
+    use2 = function(self, card, area, copier)
+        local blind = G.GAME.last_blind and G.GAME.last_blind.key
+        bonus_selection(blind, {double_hands = true})
+    end,
+    generate_ui = function(self, info_queue, card, desc_nodes, specific_vars, full_UI_table)
+        SMODS.Bonus.super.generate_ui(self, info_queue, card, desc_nodes, specific_vars, full_UI_table)
+        local blind = (G.GAME.last_blind and G.GAME.last_blind.key) or nil
+        local last_blind_done = blind and localize{type = 'name_text', key = blind, set = 'Blind'} or localize('k_none')
+        local colour = (not blind) and G.C.RED or G.C.BLUE
+        desc_nodes[#desc_nodes+1] = {
+            {n=G.UIT.C, config={align = "bm", padding = 0.02}, nodes={
+                {n=G.UIT.C, config={align = "m", colour = colour, r = 0.05, padding = 0.05}, nodes={
+                    {n=G.UIT.T, config={text = ' '..last_blind_done..' ', colour = G.C.UI.TEXT_LIGHT, scale = 0.3, shadow = true}},
+                }}
+            }}
+        }
+    end,
+    can_use = function(self, card)
+        return ((not not G.blind_select) and (G.GAME.last_blind and not not G.GAME.last_blind.key) and (G.STATE ~= G.STATES.BUFFOON_PACK) and (G.STATE ~= G.STATES.TAROT_PACK) and (G.STATE ~= G.STATES.SPECTRAL_PACK) and (G.STATE ~= G.STATES.STANDARD_PACK) and (G.STATE ~= G.STATES.PLANET_PACK)) or ((card.area == G.pack_cards) and (#G.consumeables.cards < (G.consumeables.config.card_limit + ((card.edition and card.edition.negative) and 1 or 0))))
+    end
+}
+
+SMODS.Bonus {
+    key = 'patch',
+    loc_txt = {
+        name = "Patched Blind",
+        text = {
+            "Defeat a {C:attention}Blind{}",
+            "for a {C:attention}reward{}"
+        }
+    },
+    atlas = "another",
+    pos = {x = 9, y = 1},
+    cost = 3,
+    rarity = 'Uncommon',
+    set_ability = function(self, card, initial, delay_sprites)
+    end,
+    loc_vars = function(self, info_queue, card)
+        return {vars = {}}
+    end,
+    use2 = function(self, card, area, copier)
+        local rngpick = {}
+        for i, j in pairs(G.P_BLINDS) do
+            if not j.boss or not j.boss.bonus then
+                table.insert(rngpick, i)
+            end
+        end
+        local blind = pseudorandom_element(rngpick, pseudoseed('bonus'))
+        bonus_selection(blind, {rand_reward = true})
+    end,
+    in_pool = function(self)
+        return (not not G.GAME.pool_flags.failed_broken_blind), {allow_duplicates = false}
     end
 }
 
@@ -796,7 +932,7 @@ SMODS.Bonus {
     loc_vars = function(self, info_queue, card)
         info_queue[#info_queue+1] = {key = 'bl_snake', set = 'Other'}
         info_queue[#info_queue+1] = {key = 'eternal', set = 'Other'}
-        info_queue[#info_queue+1] = {key = 'ed_negative_consumable', set = 'Other'}
+        info_queue[#info_queue+1] = {key = 'e_negative_consumable', set = 'Edition', config = {extra = 1}}
         return {vars = {}}
     end,
     use2 =function(self, card, area, copier)
@@ -891,7 +1027,11 @@ SMODS.Voucher {
     end,
     redeem = function(self)
         G.E_MANAGER:add_event(Event({func = function()
-            G.GAME.bonus_rate = 2*self.config.rate
+            if G.GAME.selected_back.name == "Ante Deck" then
+                G.GAME.bonus_rate = 10*self.config.rate
+            else
+                G.GAME.bonus_rate = 2*self.config.rate
+            end
         return true end }))
     end
 }
@@ -915,7 +1055,11 @@ SMODS.Voucher {
     requires = {'v_bb_bonus1'},
     redeem = function(self)
         G.E_MANAGER:add_event(Event({func = function()
-            G.GAME.bonus_rate = 2*self.config.rate
+            if G.GAME.selected_back.name == "Ante Deck" then
+                G.GAME.bonus_rate = 10*self.config.rate
+            else
+                G.GAME.bonus_rate = 2*self.config.rate
+            end
         return true end }))
     end
 }
@@ -1023,6 +1167,25 @@ SMODS.Booster {
     end,
 }
 
+SMODS.Back {
+    key = 'ante',
+    loc_txt = {
+        name = "Ante Deck",
+        text = {
+            "{C:red}Bonus Blinds{} show up",
+            "more often.",
+            "Required score scales far",
+            "faster for each {C:attention}Ante"
+        }
+    },
+    name = "Ante Deck",
+    pos = { x = 0, y = 0 },
+    atlas = 'decks',
+    apply = function(self)
+        G.GAME.bonus_rate = 10
+    end
+}
+
 ----- Blinds ---
 
 SMODS.Atlas({ key = "blinds", atlas_table = "ANIMATION_ATLAS", path = "blinds.png", px = 34, py = 34, frames = 21 })
@@ -1126,6 +1289,7 @@ function bonus_new_round(theBlind, bonusData)
             G.GAME.blind:set_blind(G.P_BLINDS[theBlind])
             G.GAME.blind.config.bonus = bonusData
             G.GAME.last_blind.boss = nil
+            G.GAME.blind_on_deck = 'Bonus'
             if not next(SMODS.find_card("j_bb_change")) then
                 G.GAME.blind.dollars = 0
                 G.GAME.current_round.dollars_to_be_earned = ''
@@ -1200,6 +1364,10 @@ function bonus_selection(theBlind, bonusData)
 end
 
 function bonus_start_effect(bonusData)
+    if bonusData.blind_size_mod then
+        G.GAME.blind.chips = G.GAME.blind.chips + bonusData.blind_size_mod
+        G.GAME.blind.chip_text = number_format(G.GAME.blind.chips)
+    end
     if bonusData.blind_mult then
         G.GAME.blind.mult = G.GAME.blind.mult * bonusData.blind_mult
         G.GAME.blind.chips = G.GAME.blind.chips * bonusData.blind_mult
@@ -1208,6 +1376,9 @@ function bonus_start_effect(bonusData)
     if bonusData.hands then
         ease_hands_played(bonusData.hands-G.GAME.current_round.hands_left + (G.GAME.blind.hands_sub or 0))
     end
+    if bonusData.double_hands then
+        ease_hands_played(G.GAME.current_round.hands_left)
+    end
     if bonusData.discards then
         ease_discard(bonusData.discards-G.GAME.current_round.discards_left + (G.GAME.blind.discards_sub or 0))
     end
@@ -1215,7 +1386,7 @@ function bonus_start_effect(bonusData)
         ease_ante(bonusData.ante_mod)
         G.GAME.round_resets.blind_ante = G.GAME.round_resets.blind_ante or G.GAME.round_resets.ante
         G.GAME.round_resets.blind_ante = G.GAME.round_resets.blind_ante + bonusData.ante_mod
-        G.GAME.blind.chips = math.floor((G.GAME.blind.chips * get_blind_amount(G.GAME.round_resets.blind_ante)) / get_blind_amount(G.GAME.round_resets.blind_ante+1))
+        G.GAME.blind.chips = math.floor((G.GAME.blind.chips * get_blind_amount(G.GAME.round_resets.blind_ante)) / get_blind_amount(G.GAME.round_resets.blind_ante+bonusData.ante_mod))
         G.GAME.blind.chip_text = number_format(G.GAME.blind.chips)
     end
     if bonusData.hand_size then
@@ -1295,6 +1466,33 @@ function bonus_start_effect(bonusData)
             j.ability.perma_bonus_mult = j.ability.perma_bonus_mult + bonusData.lotto.amount
         end
     end
+    if bonusData.emp_jkr then
+        if #G.jokers.cards + bonusData.emp_jkr > G.jokers.config.card_limit then
+            local deletes = {}
+            local pool = {}
+            for i = 1, #G.jokers.cards do
+                if not G.jokers.cards[i].abilty or not G.jokers.cards[i].abilty.eternal then
+                    table.insert(pool, G.jokers.cards[i])
+                end
+            end
+            if #pool > #G.jokers.cards + bonusData.emp_jkr - G.jokers.config.card_limit then
+                for i = 1, #G.jokers.cards + bonusData.emp_jkr - G.jokers.config.card_limit do
+                    local card, index = pseudorandom_element(pool, pseudoseed('empty'))
+                    table.insert(deletes, card)
+                    table.remove(pool, index)
+                end
+            else
+                deletes = pool
+            end
+            local first = nil
+            G.E_MANAGER:add_event(Event({trigger = 'before', delay = 0.75, func = function()
+                for k, v in pairs(deletes) do
+                    v:start_dissolve(nil, first)
+                    first = true
+                end
+            return true end }))
+        end
+    end
 end
 
 function bonus_reward(bonusData)
@@ -1308,6 +1506,58 @@ function bonus_reward(bonusData)
             j:flip()
         end
         G.E_MANAGER:add_event(Event({ func = function() play_sound('card1',  0.85);return true end }))
+    end
+    if bonusData.rand_reward then
+        local val = pseudorandom(pseudoseed('reward'))
+        if val < 1/6 then
+            local val2 = 0.9 + (0.1 * pseudorandom(pseudoseed('rarity')))
+            G.E_MANAGER:add_event(Event({
+                func = (function()
+                    G.E_MANAGER:add_event(Event({
+                        func = function() 
+                            local card = create_card('Joker', G.jokers, nil, val2, nil, nil, nil, 'rew')
+                            card:add_to_deck()
+                            G.jokers:emplace(card)
+                            card:set_edition({negative = true})
+                            return true
+                        end
+                    }))                     
+                    return true
+            end)}))
+        elseif val < 1/3 then
+            add_tag(Tag('tag_double'))
+            add_tag(Tag('tag_double'))
+        elseif val < 1/2 then
+            local val2 = 10 + math.floor(60 * pseudorandom(pseudoseed('money')))
+            ease_dollars(val2)
+        elseif val < 2/3 then
+            local polys = {}
+            local pool = {}
+            for i = 1, #G.playing_cards do
+                if not G.playing_cards[i].edition then
+                    table.insert(pool, G.playing_cards[i])
+                end
+            end
+            if #pool > 4 then
+                for i = 1, 4 do
+                    local card, index = pseudorandom_element(pool, pseudoseed('poly'))
+                    table.insert(polys, card)
+                    table.remove(pool, index)
+                end
+            else
+                polys = pool
+            end
+            for i, j in ipairs(polys) do
+                j:set_edition({polychrome = true}, nil, true)
+            end
+            play_sound('polychrome1', 1.2, 0.7)
+        elseif val < 5/6 then
+            add_tag(Tag('tag_ethereal'))
+            add_tag(Tag('tag_ironic'))
+        else
+            add_tag(Tag('tag_voucher'))
+            add_tag(Tag('tag_voucher'))
+        end
     end
 end
 
@@ -1367,7 +1617,7 @@ function SMODS.current_mod.process_loc_text()
     }
     G.localization.misc.dictionary["k_blind_pack"] = "Blind Pack"
     G.localization.descriptions.Other["bl_watch"] = {}
-    G.localization.descriptions.Other["bl_watch"].text = { 'Must Plau 5 cards.', 'No repeat hand', 'types this round.' }
+    G.localization.descriptions.Other["bl_watch"].text = { 'Must play 5 cards.', 'No repeat hand', 'types this round.' }
     G.localization.descriptions.Other["bl_watch"].name = "The Watch"
     G.localization.descriptions.Other["bl_crimson"] = {}
     G.localization.descriptions.Other["bl_crimson"].name = localize{type ='name_text', key = 'bl_final_heart', set = 'Blind'}
@@ -1393,9 +1643,49 @@ function SMODS.current_mod.process_loc_text()
     G.localization.descriptions.Other["bl_snake"] = {}
     G.localization.descriptions.Other["bl_snake"].name = localize{type ='name_text', key = 'bl_serpent', set = 'Blind'}
     G.localization.descriptions.Other["bl_snake"].text = localize{type = 'raw_descriptions', key = 'bl_serpent', set = 'Blind', vars = {}}
-    G.localization.descriptions.Other["ed_negative_consumable"] = {}
-    G.localization.descriptions.Other["ed_negative_consumable"].name = localize{type ='name_text', key = 'e_negative_consumable', set = 'Edition'}
-    G.localization.descriptions.Other["ed_negative_consumable"].text = localize{type = 'raw_descriptions', key = 'e_negative_consumable', set = 'Edition', vars = {1}}
+    -- G.localization.descriptions.Other["ed_negative_consumable"] = {}
+    -- G.localization.descriptions.Other["ed_negative_consumable"].name = localize{type ='name_text', key = 'e_negative_consumable', set = 'Edition'}
+    -- G.localization.descriptions.Other["ed_negative_consumable"].text = localize{type = 'raw_descriptions', key = 'e_negative_consumable', set = 'Edition', vars = {1}}
+end
+
+local old_amount = get_blind_amount
+function get_blind_amount(ante)
+    local old = old_amount(ante)
+    local k = (old/old)*1.5
+    if G.GAME.selected_back.name == "Ante Deck" then
+        if not G.GAME.modifiers.scaling or G.GAME.modifiers.scaling == 1 then 
+            local amounts = {
+              300,  1000, 4000,  16000,  35000,  70000,   100000,  250000
+            }
+            if ante < 1 then return (old/old)*100 end
+            if ante <= 8 then return (old/old)*amounts[ante] end
+            local a, b, c, d = (old/old)*amounts[8],(old/old)*1.6,ante-8, 1 + 0.2*(ante-8)
+            local amount = (old/old)*math.floor(a*(b+(k*c)^d)^c)
+            amount = amount - amount%(10^math.floor(math.log10(amount)-1))
+            return amount
+          elseif G.GAME.modifiers.scaling == 2 then 
+            local amounts = {
+              300,  2000, 9000,  30000,  70000,  140000,   320000,  500000
+            }
+            if ante < 1 then return (old/old)*100 end
+            if ante <= 8 then return (old/old)*amounts[ante] end
+            local a, b, c, d = (old/old)*amounts[8],(old/old)*1.6,ante-8, 1 + 0.2*(ante-8)
+            local amount = (old/old)*math.floor(a*(b+(k*c)^d)^c)
+            amount = amount - amount%(10^math.floor(math.log10(amount)-1))
+            return amount
+          else
+            local amounts = {
+              300,  5000, 18000,  45000,  100000,  300000,   900000,  2000000
+            }
+            if ante < 1 then return (old/old)*100 end
+            if ante <= 8 then return (old/old)*amounts[ante] end
+            local a, b, c, d = (old/old)*amounts[8],(old/old)*1.6,ante-8, 1 + 0.2*(ante-8)
+            local amount = (old/old)*math.floor(a*(b+(k*c)^d)^c)
+            amount = amount - amount%(10^math.floor(math.log10(amount)-1))
+            return amount
+        end
+    end
+    return old
 end
 
 ----------------------------------------------
