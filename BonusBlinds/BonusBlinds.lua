@@ -906,9 +906,6 @@ SMODS.Bonus {
         end
         local blind = pseudorandom_element(rngpick, pseudoseed('bonus'))
         bonus_selection(blind, {ante_mod = -card.ability.remove_ante})
-    end,
-    can_use = function(self, card)
-        return (not not G.blind_select)
     end
 }
 
@@ -937,9 +934,6 @@ SMODS.Bonus {
     end,
     use2 =function(self, card, area, copier)
         bonus_selection('bl_serpent', {eternal_round = true, spectrals = true})
-    end,
-    can_use = function(self, card)
-        return (not not G.blind_select)
     end
 }
 
