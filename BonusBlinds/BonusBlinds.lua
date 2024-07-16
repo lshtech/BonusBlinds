@@ -4,7 +4,7 @@
 --- PREFIX: bb
 --- MOD_AUTHOR: [mathguy]
 --- MOD_DESCRIPTION: Bonus Blinds
---- VERSION: 1.2.0
+--- VERSION: 1.1.0
 ----------------------------------------------
 ------------MOD CODE -------------------------
 
@@ -683,7 +683,7 @@ SMODS.Bonus {
             bonus_selection('bl_bb_watch', {tags = card.ability.reward.tags})
         elseif common == 'sky' then
             local best = (G.GAME and G.GAME.round_scores and G.GAME.round_scores.hand.amt) or 0
-            bonus_selection('bl_small', {blind_size_mod = best, tags = card.ability.reward.tags})
+            bonus_selection('bl_small', {blind_size_mod = best * 2, tags = card.ability.reward.tags})
         end
     end
 }
@@ -808,7 +808,7 @@ SMODS.Bonus {
     use2 = function(self, card, area, copier)
         local rngpick = {}
         for i, j in pairs(G.P_BLINDS) do
-            if j.boss and not j.boss.showodwn and not j.boss.bonus then
+            if j.boss and not j.boss.showdown and not j.boss.bonus then
                 table.insert(rngpick, i)
             end
         end
@@ -1437,7 +1437,9 @@ function bonus_start_effect(bonusData)
         ease_ante(bonusData.ante_mod)
         G.GAME.round_resets.blind_ante = G.GAME.round_resets.blind_ante or G.GAME.round_resets.ante
         G.GAME.round_resets.blind_ante = G.GAME.round_resets.blind_ante + bonusData.ante_mod
-        G.GAME.blind.chips = math.floor((G.GAME.blind.chips * get_blind_amount(G.GAME.round_resets.blind_ante)) / get_blind_amount(G.GAME.round_resets.blind_ante+bonusData.ante_mod))
+        G.GAME.blind.chips = G.GAME.blind.chips * get_blind_amount(G.GAME.round_resets.blind_ante)
+        G.GAME.blind.chips = G.GAME.blind.chips / get_blind_amount(G.GAME.round_resets.blind_ante - bonusData.ante_mod)
+        G.GAME.blind.chips = math.floor(G.GAME.blind.chips)
         G.GAME.blind.chip_text = number_format(G.GAME.blind.chips)
     end
     if bonusData.hand_size then
