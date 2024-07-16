@@ -440,7 +440,7 @@ SMODS.Bonus {
         return {vars = {localize{type ='name_text', key = card.ability.the_blind, set = 'Blind'}, best}}
     end,
     use2 =function(self, card, area, copier)
-        bonus_selection(card.ability.the_blind, {blind_size_mod = ((G.GAME and G.GAME.round_scores and G.GAME.round_scores.hand.amt) or 0)})
+        bonus_selection(card.ability.the_blind, {blind_size_mod = ((G.GAME and G.GAME.round_scores and (G.GAME.round_scores.hand.amt * 2)) or 0)})
     end
 }
 
@@ -475,7 +475,7 @@ SMODS.Bonus {
     end
 }
 
---- Uncommon (6)
+--- Uncommon (8)
 
 SMODS.Bonus {
     key = 'redo',
@@ -786,6 +786,37 @@ SMODS.Bonus {
     end
 }
 
+SMODS.Bonus {
+    key = 'dice',
+    loc_txt = {
+        name = "Dice Blind",
+        text = {
+            "Defeat a {C:attention}Boss Blind{} for",
+            "{C:attention}#1#{} free {C:green}rerolls{} next shop",
+        }
+    },
+    atlas = "another",
+    pos = {x = 10, y = 1},
+    cost = 3,
+    rarity = 'Uncommon',
+    set_ability = function(self, card, initial, delay_sprites)
+        card.ability.reward = {rerolls = 5}
+    end,
+    loc_vars = function(self, info_queue, card)
+        return {vars = {card.ability.reward.rerolls}}
+    end,
+    use2 = function(self, card, area, copier)
+        local rngpick = {}
+        for i, j in pairs(G.P_BLINDS) do
+            if j.boss and not j.boss.showodwn and not j.boss.bonus then
+                table.insert(rngpick, i)
+            end
+        end
+        local blind = pseudorandom_element(rngpick, pseudoseed('bonus'))
+        bonus_selection(blind, {free_rerolls = card.ability.reward.rerolls})
+    end
+}
+
 --- Rare (3)
 
 SMODS.Bonus {
@@ -873,6 +904,32 @@ SMODS.Bonus {
     end,
     use2 =function(self, card, area, copier)
         bonus_selection(card.ability.the_blind, {lotto = {amount = card.ability.mult, cards = card.ability.cards}})
+    end
+}
+
+SMODS.Bonus {
+    key = 'hankercheif',
+    loc_txt = {
+        name = "Hankercheif Blind",
+        text = {
+            "Play {C:attention}#1#{}. Earn {C:money}$1{} when",
+            "a playing card is scored",
+        }
+    },
+    atlas = "another",
+    pos = {x = 11, y = 1},
+    rarity = 'Rare',
+    cost = 5,
+    set_ability = function(self, card, initial, delay_sprites)
+        card.ability.the_blind = 'bl_ox'
+        card.ability.reward = {dollars_score = 1}
+    end,
+    loc_vars = function(self, info_queue, card)
+        info_queue[#info_queue+1] = {key = 'blind_ox', set = 'Other'}
+        return {vars = {localize{type ='name_text', key = card.ability.the_blind, set = 'Blind'}}}
+    end,
+    use2 = function(self, card, area, copier)
+        bonus_selection(card.ability.the_blind, card.ability.reward)
     end
 }
 
@@ -1465,7 +1522,7 @@ function bonus_start_effect(bonusData)
             local deletes = {}
             local pool = {}
             for i = 1, #G.jokers.cards do
-                if not G.jokers.cards[i].abilty or not G.jokers.cards[i].abilty.eternal then
+                if (not G.jokers.cards[i].abilty or not G.jokers.cards[i].abilty.eternal) and (not G.jokers.cards[i].edition or not G.jokers.cards[i].edition.negative) then
                     table.insert(pool, G.jokers.cards[i])
                 end
             end
@@ -1553,6 +1610,10 @@ function bonus_reward(bonusData)
             add_tag(Tag('tag_voucher'))
         end
     end
+    if bonusData.free_rerolls then
+        G.GAME.current_round.free_rerolls = G.GAME.current_round.free_rerolls + bonusData.free_rerolls
+        calculate_reroll_cost(true)
+    end
 end
 
 function bonus_end_of_round(bonusData)
@@ -1637,6 +1698,9 @@ function SMODS.current_mod.process_loc_text()
     G.localization.descriptions.Other["bl_snake"] = {}
     G.localization.descriptions.Other["bl_snake"].name = localize{type ='name_text', key = 'bl_serpent', set = 'Blind'}
     G.localization.descriptions.Other["bl_snake"].text = localize{type = 'raw_descriptions', key = 'bl_serpent', set = 'Blind', vars = {}}
+    G.localization.descriptions.Other["blind_ox"] = {}
+    G.localization.descriptions.Other["blind_ox"].name = localize{type ='name_text', key = 'bl_ox', set = 'Blind'}
+    G.localization.descriptions.Other["blind_ox"].text = localize{type = 'raw_descriptions', key = 'bl_ox', set = 'Blind', vars = {localize('ph_most_played')}}
     -- G.localization.descriptions.Other["ed_negative_consumable"] = {}
     -- G.localization.descriptions.Other["ed_negative_consumable"].name = localize{type ='name_text', key = 'e_negative_consumable', set = 'Edition'}
     -- G.localization.descriptions.Other["ed_negative_consumable"].text = localize{type = 'raw_descriptions', key = 'e_negative_consumable', set = 'Edition', vars = {1}}
@@ -1649,7 +1713,7 @@ function get_blind_amount(ante)
     if G.GAME.selected_back.name == "Ante Deck" then
         if not G.GAME.modifiers.scaling or G.GAME.modifiers.scaling == 1 then 
             local amounts = {
-              300,  1000, 4000,  16000,  35000,  70000,   100000,  250000
+              300,  1000, 4000,  15000,  30000,  60000,   100000,  200000
             }
             if ante < 1 then return (old/old)*100 end
             if ante <= 8 then return (old/old)*amounts[ante] end
@@ -1659,7 +1723,7 @@ function get_blind_amount(ante)
             return amount
           elseif G.GAME.modifiers.scaling == 2 then 
             local amounts = {
-              300,  2000, 9000,  30000,  70000,  140000,   320000,  500000
+              300,  1500, 6000,  18000,  50000,  90000,   180000,  350000
             }
             if ante < 1 then return (old/old)*100 end
             if ante <= 8 then return (old/old)*amounts[ante] end
@@ -1669,7 +1733,7 @@ function get_blind_amount(ante)
             return amount
           else
             local amounts = {
-              300,  5000, 18000,  45000,  100000,  300000,   900000,  2000000
+              300,  2000, 8000,  35000,  100000,  350000,   500000,  1000000
             }
             if ante < 1 then return (old/old)*100 end
             if ante <= 8 then return (old/old)*amounts[ante] end
