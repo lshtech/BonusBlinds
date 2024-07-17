@@ -242,3 +242,16 @@ position = 'after'
 payload = '''self.load_special_card = nil'''
 match_indent = true
 
+[[patches]]
+[patches.pattern]
+target = 'functions/common_events.lua'
+pattern = '''G.shop_jokers.T.w = G.GAME.shop.joker_max*1.01*G.CARD_W'''
+position = 'at'
+payload = '''if G.GAME.super_shop then
+    G.shop_jokers.T.w = math.min(3, G.GAME.shop.joker_max)*1.01*G.CARD_W 
+else 
+    G.shop_jokers.T.w = G.GAME.shop.joker_max*1.01*G.CARD_W
+end'''
+match_indent = true
+overwrite = true
+

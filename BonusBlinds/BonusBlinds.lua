@@ -2090,19 +2090,20 @@ function handle_special_shop_card(nosave_shop, reroll)
         return true
     elseif G.special_card and G.GAME.super_shop then
         local num = pseudorandom(pseudoseed('special'))
-        if num < 0.3 then
+        if num < 0.25 then
             local card = create_card("Joker", G.special_card, nil, nil, nil, nil, 'j_credit_card', 'sho')
             create_shop_card_ui(card, card.type, G.special_card)
             card:set_edition({negative = true})
+            card:set_eternal(nil)
             card:set_perishable(true)
             card.ability.perish_tally = 1
             G.special_card:emplace(card)
-        elseif num < 0.6 then
+        elseif num < 0.55 then
             local num2 = pseudorandom(pseudoseed('rarity')) * 0.04
             local card = create_card("Joker", G.special_card, nil, 0.96 + num2, nil, nil, nil, 'sho')
             create_shop_card_ui(card, card.type, G.special_card)
             local num3 = pseudorandom(pseudoseed('edition'))
-            if (num3 < 0.5) then
+            if (num3 < 0.4) then
                 card:set_edition({negative = true})
             else
                 card:set_edition({polychrome = true})
@@ -2126,8 +2127,8 @@ function handle_special_shop_card(nosave_shop, reroll)
             create_shop_card_ui(card, 'Booster', G.special_card)
             card:start_materialize()
             G.special_card:emplace(card)
-        elseif num < 0.96 then
-            local card = create_card('Spectral', G.special_card, nil, nil, nil, nil, 'c_black_hole', 'sho')
+        elseif num < 0.98 then
+            local card = create_card('Spectral', G.special_card, nil, nil, nil, nil, nil, 'sho')
             create_shop_card_ui(card, card.type, G.special_card)
             card:start_materialize()
             G.special_card:emplace(card)
@@ -2143,10 +2144,10 @@ end
 
 G.FUNCS.super_reroll_shop = function(e) 
     stop_use()
+    ease_dollars(-G.GAME.current_round.super_reroll_cost)
     G.GAME.current_round.super_reroll_cost = (G.GAME.current_round.super_reroll_cost or 10) + 5
     G.CONTROLLER.locks.shop_reroll = true
     if G.CONTROLLER:save_cardarea_focus('shop_booster') and G.CONTROLLER:save_cardarea_focus('special_card') then G.CONTROLLER.interrupt.focus = true end
-    ease_dollars(-G.GAME.current_round.super_reroll_cost)
     G.E_MANAGER:add_event(Event({
         trigger = 'immediate',
         func = function()
