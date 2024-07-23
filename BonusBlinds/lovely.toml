@@ -17,18 +17,16 @@ match_indent = true
 target = 'functions/state_events.lua'
 pattern = '''if G.GAME.round_resets.blind == G.P_BLINDS.bl_small then'''
 position = 'at'
-payload = '''if (bonuser ~= true) and (G.GAME.round_resets.blind == G.P_BLINDS.bl_small) then'''
+payload = '''if G.GAME.blind_on_deck == 'Small' then'''
 match_indent = true
-overwrite = true
 
 [[patches]]
 [patches.pattern]
 target = 'functions/state_events.lua'
 pattern = '''G.FUNCS.draw_from_hand_to_discard()'''
 position = 'before'
-payload = '''local bonuser = false
+payload = '''
 if G.GAME.blind:get_type() == 'Bonus' then
-    bonuser = true
     bonus_end_of_round(G.GAME.blind.config.bonus)
 end'''
 match_indent = true
@@ -260,7 +258,7 @@ overwrite = true
 target = 'card.lua'
 pattern = '''if self.ability.name == 'Rocket' and G.GAME.blind.boss then'''
 position = 'at'
-payload = '''if self.ability.name == 'Rocket' and G.GAME.blind.boss and not (G.GAME.blind.config and  G.GAME.blind.bonus) then'''
+payload = '''if self.ability.name == 'Rocket' and G.GAME.blind.boss and not (G.GAME.blind.config and  G.GAME.blind.config.bonus) then'''
 match_indent = true
 overwrite = true
 
@@ -269,7 +267,7 @@ overwrite = true
 target = 'card.lua'
 pattern = '''if self.ability.name == 'Campfire' and G.GAME.blind.boss and self.ability.x_mult > 1 then'''
 position = 'at'
-payload = '''if self.ability.name == 'Campfire' and G.GAME.blind.boss and not (G.GAME.blind.config and  G.GAME.blind.bonus) and self.ability.x_mult > 1 then'''
+payload = '''if self.ability.name == 'Campfire' and G.GAME.blind.boss and not (G.GAME.blind.config and G.GAME.blind.config.bonus) and self.ability.x_mult > 1 then'''
 match_indent = true
 overwrite = true
 

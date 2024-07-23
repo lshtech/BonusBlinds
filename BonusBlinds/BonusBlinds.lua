@@ -4,7 +4,7 @@
 --- PREFIX: bb
 --- MOD_AUTHOR: [mathguy]
 --- MOD_DESCRIPTION: Bonus Blinds
---- VERSION: 1.3
+--- VERSION: 1.2.1
 ----------------------------------------------
 ------------MOD CODE -------------------------
 
@@ -874,7 +874,7 @@ SMODS.Bonus {
     end
 }
 
---- Rare (3)
+--- Rare (4)
 
 SMODS.Bonus {
     key = 'luck',
@@ -1922,9 +1922,19 @@ function get_blind_amount(ante)
             local amount = (old/old)*math.floor(a*(b+(k*c)^d)^c)
             amount = amount - amount%(10^math.floor(math.log10(amount)-1))
             return amount
-        else
+        elseif G.GAME.modifiers.scaling == 4.5 then
             local amounts = {
                 300,  3000, 12000,  50000,  175000,  450000,   700000,  1500000
+              }
+              if ante < 1 then return (old/old)*100 end
+              if ante <= 8 then return (old/old)*amounts[ante] end
+              local a, b, c, d = (old/old)*amounts[8],(old/old)*1.6,ante-8, 1 + 0.2*(ante-8)
+              local amount = (old/old)*math.floor(a*(b+(k*c)^d)^c)
+              amount = amount - amount%(10^math.floor(math.log10(amount)-1))
+              return amount
+        else
+            local amounts = {
+                300,  5000, 16000,  70000,  250000,  600000,   1000000,  2500000
               }
               if ante < 1 then return (old/old)*100 end
               if ante <= 8 then return (old/old)*amounts[ante] end
