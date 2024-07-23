@@ -4,7 +4,7 @@
 --- PREFIX: bb
 --- MOD_AUTHOR: [mathguy]
 --- MOD_DESCRIPTION: Bonus Blinds
---- VERSION: 1.3.1
+--- VERSION: 1.3.2
 ----------------------------------------------
 ------------MOD CODE -------------------------
 
@@ -2131,6 +2131,9 @@ function handle_special_shop_card(nosave_shop, reroll)
                     if not _type or _type == v.kind then it = it + ((((G.GAME.selected_back.name == "Ante Deck") and (v.group_key == 'k_blind_pack') and (v.weight*5)) or v.weight) or 1) end
                     if it >= poll and it - ((((G.GAME.selected_back.name == "Ante Deck") and (v.group_key == 'k_blind_pack') and (v.weight*5)) or v.weight) or 1) <= poll then center = v; break end
                 end
+            end
+            if center == nil then
+                center = G.P_CENTERS["p_arcana_mega_1"]
             end
             local card = Card(G.special_card.T.x + G.special_card.T.w/2,
             G.special_card.T.y, G.CARD_W, G.CARD_H, G.P_CARDS.empty, G.P_CENTERS[center.key], {bypass_discovery_center = true, bypass_discovery_ui = true})
