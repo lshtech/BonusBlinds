@@ -138,7 +138,7 @@ local bonusType = SMODS.ConsumableType {
         {key = 'Rare', rate = 5},
         {key = 'Legendary', rate = 1},
     },
-    default = "c_bb_bonus"
+    default = "c_bb_extra"
 }
 
 SMODS.Bonus = SMODS.Consumable:extend {
@@ -150,6 +150,9 @@ SMODS.Bonus = SMODS.Consumable:extend {
             Rare = HEX("fda200"),
             Legendary = {0,0,0,1}
         }
+        if G and G.C and G.C.DARK_EDITION then
+            colours["Legendary"] = G.C.DARK_EDITION
+        end
         local len = string.len(self.rarity)
         local size = 1.3 - (len > 5 and 0.02 * (len - 5) or 0)
         badges[#badges + 1] = create_badge(self.rarity, colours[self.rarity], nil, size)
@@ -192,7 +195,7 @@ local unknown = SMODS.UndiscoveredSprite {
     pos = {x = 0, y = 0}
 }
 
---- Common (11)
+--- Common (13)
 
 SMODS.Bonus {
     key = 'extra',
@@ -508,7 +511,58 @@ SMODS.Bonus {
     end
 }
 
---- Uncommon (9)
+SMODS.Bonus {
+    key = 'void',
+    loc_txt = {
+        name = "Void Blind",
+        text = {
+            "Defeat {C:attention}#1#{} to get",
+            "a {C:attention}#2#{}"
+        }
+    },
+    atlas = "another",
+    pos = {x = 3, y = 2},
+    rarity = 'Common',
+    set_ability = function(self, card, initial, delay_sprites)
+        card.ability.the_blind = 'bl_window'
+        card.ability.reward = {tags = {'tag_bb_zero'},}
+    end,
+    loc_vars = function(self, info_queue, card)
+        info_queue[#info_queue+1] = {key = 'blind_window', set = 'Other'}
+        info_queue[#info_queue+1] = {key = 't_nope', set = 'Other'}
+        info_queue[#info_queue+1] = {key = 't_null', set = 'Other'}
+        return {vars = {localize{type ='name_text', key = card.ability.the_blind, set = 'Blind'}, localize{type ='name_text', key = card.ability.reward.tags[1], set = 'Tag'}}}
+    end,
+    use2 = function(self, card, area, copier)
+        bonus_selection(card.ability.the_blind, card.ability.reward)
+    end
+}
+
+SMODS.Bonus {
+    key = 'weak',
+    loc_txt = {
+        name = "Weak Blind",
+        text = {
+            "Play {C:blue}#1#{} with",
+            "{C:attention}-#2#{} {C:blue}Hands{} and {C:attention}-#2#{} {C:red}Discards{}"
+        }
+    },
+    atlas = "another",
+    pos = {x = 5, y = 2},
+    rarity = 'Common',
+    set_ability = function(self, card, initial, delay_sprites)
+        card.ability.the_blind = 'bl_small'
+        card.ability.hands_mod = 1
+    end,
+    loc_vars = function(self, info_queue, card)
+        return {vars = {localize{type ='name_text', key = card.ability.the_blind, set = 'Blind'}, card.ability.hands_mod}}
+    end,
+    use2 = function(self, card, area, copier)
+        bonus_selection(card.ability.the_blind, {hands_mod = -1 * card.ability.hands_mod, discards_mod = -1 * card.ability.hands_mod})
+    end
+}
+
+--- Uncommon (10)
 
 SMODS.Bonus {
     key = 'redo',
@@ -529,6 +583,7 @@ SMODS.Bonus {
     end,
     loc_vars = function(self, info_queue, card)
         info_queue[#info_queue+1] = {key = 'bl_violet', set = 'Other'}
+        info_queue[#info_queue+1] = {key = 'tag_boss', set = 'Tag'}
         return {vars = {localize{type ='name_text', key = card.ability.the_blind, set = 'Blind'}, localize{type ='name_text', key = card.ability.reward.tags[1], set = 'Tag'}}}
     end,
     use2 =function(self, card, area, copier)
@@ -667,7 +722,10 @@ SMODS.Bonus {
         return {vars = {localize{type ='name_text', key = card.ability.reward.tags[1], set = 'Tag'}}}
     end,
     use2 =function(self, card, area, copier)
-        local commons = {'extra', 'needy', 'sail', 'locked', 'fixed', 'combo', 'brick', 'watching', 'sky'}
+        local commons = {'extra', 'needy', 'sail', 'locked', 'fixed', 'combo', 'brick', 'watching', 'sky', 'cruel', 'void'}
+        if (G.GAME.round_resets.ante ~= G.GAME.win_ante) and (G.GAME.round_resets.ante ~= (G.GAME.win_ante - 1)) then
+            table.insert(commons, 'roulette')
+        end
         local common = pseudorandom_element(commons, pseudoseed('meta'))
         if common == 'extra' then
             local rngpick = {}
@@ -717,6 +775,28 @@ SMODS.Bonus {
         elseif common == 'sky' then
             local best = (G.GAME and G.GAME.round_scores and G.GAME.round_scores.hand.amt) or 0
             bonus_selection('bl_small', {blind_size_mod = best * 2, tags = card.ability.reward.tags})
+        elseif common == 'cruel' then
+            local rngpick = {}
+            for i, j in pairs(G.P_BLINDS) do
+                if j.boss and not j.boss.showdown and not j.boss.bonus then
+                    table.insert(rngpick, i)
+                end
+            end
+            local blind = pseudorandom_element(rngpick, pseudoseed('bonus'))
+            bonus_selection(blind, {emp_jkr = 1, tags = card.ability.reward.tags})
+        elseif common == 'roulette' then
+            if pseudorandom("roulette") < G.GAME.probabilities.normal/3 then
+                bonus_selection(card.ability.the_blind, {ante_mod = 1, tags = card.ability.reward.tags})
+            else
+                bonus_selection(card.ability.the_blind, {tags = card.ability.reward.tags})
+            end
+        elseif common == 'void' then
+            local tags0 = {}
+            for i, j in ipairs(card.ability.reward.tags) do
+                table.insert(tags0, j)
+            end
+            table.insert(tags0, 'tag_bb_zero')
+            bonus_selection(card.ability.the_blind, {tags = tags0})
         end
     end
 }
@@ -871,6 +951,40 @@ SMODS.Bonus {
     end,
     use2 =function(self, card, area, copier)
         bonus_selection(card.ability.the_blind, {none = true})
+    end
+}
+
+SMODS.Bonus {
+    key = 'sharehold',
+    loc_txt = {
+        name = "Shareholder Blind",
+        text = {
+            "Defeat {C:red}#1#{}",
+            "to get {C:money}#2#{}",
+            "{s:0.8}reward changes at end of round",
+            "{s:0.8,C:red}-$15 {s:0.8}to {s:0.8,C:money}$15"
+        }
+    },
+    atlas = "another",
+    pos = {x = 4, y = 2},
+    cost = 3,
+    rarity = 'Uncommon',
+    set_ability = function(self, card, initial, delay_sprites)
+        card.ability.the_blind = 'bl_tooth'
+        card.ability.reward = {dollars = -3}
+    end,
+    loc_vars = function(self, info_queue, card)
+        info_queue[#info_queue+1] = {key = 'blind_tooth', set = 'Other'}
+        local balance = ""
+        if card.ability.reward.dollars < 0 then
+            balance = "-$" .. tostring(-1 * card.ability.reward.dollars)
+        else
+            balance = "$" .. tostring(card.ability.reward.dollars)
+        end
+        return {vars = {localize{type ='name_text', key = card.ability.the_blind, set = 'Blind'}, balance}}
+    end,
+    use2 =function(self, card, area, copier)
+        bonus_selection(card.ability.the_blind, card.ability.reward)
     end
 }
 
@@ -1088,7 +1202,7 @@ SMODS.Spectral {
     loc_txt = {
         name = "Loop",
         text = {
-            "Create a random",
+            "Create a non-{C:red}Common{}",
             "{C:red}Bonus Blind{}"
         }
     },
@@ -1097,7 +1211,8 @@ SMODS.Spectral {
     use = function(self, card, area, copier)
         G.E_MANAGER:add_event(Event({trigger = 'after', delay = 0.4, func = function()
             play_sound('timpani')
-            local card = create_card("Bonus", G.consumeables)
+            local rarity = 0.765 + (pseudorandom(pseudoseed('loop')) * 0.235)
+            local card = create_card("Bonus", G.consumeables, nil, 0.765)
             card:add_to_deck()
             G.consumeables:emplace(card)
             card:juice_up(0.3, 0.5)
@@ -1145,6 +1260,76 @@ SMODS.Tag {
         return {}
     end,
     config = {type = 'new_blind_choice'}
+}
+
+SMODS.Tag {
+    key = 'zero',
+    atlas = 'bonus_tags',
+    loc_txt = {
+        name = "Zero Tag",
+        text = {
+            "Convert the next",
+            "selected {C:attention}Tag{} into",
+            "a {C:attention}#1#{}",
+            "{s:0.8,C:attention}Zero {s:0.8}and {s:0.8,C:attention}Null Tag{s:0.8} excluded"
+        }
+    },
+    pos = {x = 1, y = 0},
+    apply = function(tag, context)
+        if context.type == 'tag_add' and ((context.tag.key ~= 'tag_bb_zero') and (context.tag.key ~= 'tag_bb_null')) then
+            local lock = tag.ID
+            G.CONTROLLER.locks[lock] = true
+            tag:yep('+', G.C.BLUE,function()
+                local tag_key = 0
+                for k, v in pairs(G.HUD_tags) do
+                    if v.definition.nodes[1].nodes[1].config.object == context.tag.tag_sprite then tag_key = k end
+                end
+                context.tag.key = "tag_bb_null"
+                local proto = G.P_TAGS["tag_bb_null"]
+                context.tag.config = copy_table(proto.config)
+                context.tag.pos = proto.pos
+                context.tag.name = proto.name
+                local old = context.tag.tag_sprite
+                local nope, tag_sprite_ui = context.tag:generate_UI()
+                local x, y = old.T.x, old.T.y
+                tag_sprite_ui.T.x = x
+                tag_sprite_ui.T.y = y
+                G.HUD_tags[tag_key].definition.nodes[1].nodes[1].config.object = tag_sprite_ui
+                G.HUD_tags[tag_key]:recalculate()
+                old:remove()
+                discover_card(proto)
+                G.CONTROLLER.locks[lock] = nil
+                return true
+            end)
+            tag.triggered = true
+        end
+    end,
+    loc_vars = function(self, info_queue, tag)
+        info_queue[#info_queue+1] = {key = 't_null', set = 'Other'}
+        return {vars = {localize{type ='name_text', key = "tag_bb_null", set = 'Tag'}}}
+    end,
+    config = {type = 'tag_add'},
+    in_pool = function(self)
+        return false
+    end
+}
+
+SMODS.Tag {
+    key = 'null',
+    atlas = 'bonus_tags',
+    loc_txt = {
+        name = "Null Tag",
+        text = {
+            "{C:inactive}Does nothing?"
+        }
+    },
+    name = "Null Tag",
+    pos = {x = 2, y = 0},
+    apply = function(tag, context)
+    end,
+    in_pool = function(self)
+        return false
+    end
 }
 
 SMODS.Voucher {
@@ -1341,7 +1526,7 @@ SMODS.Back {
     trigger_effect = function(self, args)
         if args.context == 'eval' and G.GAME.last_blind and G.GAME.last_blind.boss then
             G.GAME.super_shop = true
-            G.GAME.current_round.super_reroll_cost = 10
+            G.GAME.current_round.super_reroll_cost = 6
         end
     end
 }
@@ -1403,7 +1588,7 @@ SMODS.Blind {
 SMODS.Blind {
     loc_txt = {
         name = 'The Countdown',
-        text = { 'Hands allowed for ', '#1#' }
+        text = { 'No hands allowed ', 'after #1#' }
     },
     key = 'countdown',
     name = 'The Countdown',
@@ -1416,7 +1601,7 @@ SMODS.Blind {
     dollars = 5,
     mult = 2,
     set_blind = function(self)
-        G.GAME.blind.config.timing = G.GAME.blind.config.timing or 60
+        G.GAME.blind.config.timing = 60
     end,
     debuff_hand = function(self, cards, hand, handname, check)
         if G.GAME.blind.config.timing <= 0 then
@@ -1428,7 +1613,7 @@ SMODS.Blind {
         if G.GAME.blind.config.timing <= 0 then
             return "Times Up"
         end
-        return "Hands allowed for 1:00"
+        return "No hands allowed after 1:00"
     end,
     in_pool = function(self)
         return false
@@ -1594,8 +1779,18 @@ function bonus_start_effect(bonusData)
     if bonusData.double_hands then
         ease_hands_played(G.GAME.current_round.hands_left)
     end
+    if bonusData.hands_mod then
+        if (G.GAME.current_round.hands_left + bonusData.hands_mod) > 0 then
+            ease_hands_played(bonusData.hands_mod)
+        end
+    end
     if bonusData.discards then
         ease_discard(bonusData.discards-G.GAME.current_round.discards_left + (G.GAME.blind.discards_sub or 0))
+    end
+    if bonusData.discards_mod then
+        if (G.GAME.current_round.discards_left + bonusData.hands_mod) >= 0 then
+            ease_discard(bonusData.hands_mod)
+        end
     end
     if bonusData.ante_mod then
         ease_ante(bonusData.ante_mod)
@@ -1780,6 +1975,9 @@ function bonus_reward(bonusData)
         G.GAME.current_round.free_rerolls = G.GAME.current_round.free_rerolls + bonusData.free_rerolls
         calculate_reroll_cost(true)
     end
+    if bonusData.dollars then
+        ease_dollars(bonusData.dollars)
+    end
 end
 
 function bonus_end_of_round(bonusData)
@@ -1829,7 +2027,7 @@ function bonus_end_of_round(bonusData)
     end
     if bonusData.super_shop then
         G.GAME.super_shop = true
-        G.GAME.current_round.super_reroll_cost = 10
+        G.GAME.current_round.super_reroll_cost = 6
     end
 end
 
@@ -1845,7 +2043,7 @@ function SMODS.current_mod.process_loc_text()
     G.localization.descriptions.Other["bl_watch"].text = { 'Must play 5 cards.', 'No repeat hand', 'types this round.' }
     G.localization.descriptions.Other["bl_watch"].name = "The Watch"
     G.localization.descriptions.Other["bl_countdown"] = {}
-    G.localization.descriptions.Other["bl_countdown"].text = { 'Hands allowed for ', '1:00' }
+    G.localization.descriptions.Other["bl_countdown"].text = { 'No Hands allowed ', 'after 1:00' }
     G.localization.descriptions.Other["bl_countdown"].name = "The Countdown"
     G.localization.descriptions.Other["bl_crimson"] = {}
     G.localization.descriptions.Other["bl_crimson"].name = localize{type ='name_text', key = 'bl_final_heart', set = 'Blind'}
@@ -1874,6 +2072,18 @@ function SMODS.current_mod.process_loc_text()
     G.localization.descriptions.Other["blind_ox"] = {}
     G.localization.descriptions.Other["blind_ox"].name = localize{type ='name_text', key = 'bl_ox', set = 'Blind'}
     G.localization.descriptions.Other["blind_ox"].text = localize{type = 'raw_descriptions', key = 'bl_ox', set = 'Blind', vars = {localize('ph_most_played')}}
+    G.localization.descriptions.Other["blind_window"] = {}
+    G.localization.descriptions.Other["blind_window"].name = localize{type ='name_text', key = 'bl_window', set = 'Blind'}
+    G.localization.descriptions.Other["blind_window"].text = localize{type = 'raw_descriptions', key = 'bl_window', set = 'Blind', vars = {localize('ph_most_played')}}
+    G.localization.descriptions.Other["t_nope"] = {}
+    G.localization.descriptions.Other["t_nope"].name = "Zero Tag"
+    G.localization.descriptions.Other["t_nope"].text = { "Convert the next", "selected {C:attention}Tag{} into", "a {C:attention}Null Tag{}" }
+    G.localization.descriptions.Other["t_null"] = {}
+    G.localization.descriptions.Other["t_null"].name = "Null Tag"
+    G.localization.descriptions.Other["t_null"].text = { "{C:inactive}Does nothing?" }
+    G.localization.descriptions.Other["blind_tooth"] = {}
+    G.localization.descriptions.Other["blind_tooth"].name = localize{type ='name_text', key = 'bl_tooth', set = 'Blind'}
+    G.localization.descriptions.Other["blind_tooth"].text = localize{type = 'raw_descriptions', key = 'bl_tooth', set = 'Blind', vars = {localize('ph_most_played')}}
     -- G.localization.descriptions.Other["ed_negative_consumable"] = {}
     -- G.localization.descriptions.Other["ed_negative_consumable"].name = localize{type ='name_text', key = 'e_negative_consumable', set = 'Edition'}
     -- G.localization.descriptions.Other["ed_negative_consumable"].text = localize{type = 'raw_descriptions', key = 'e_negative_consumable', set = 'Edition', vars = {1}}
@@ -2158,7 +2368,7 @@ end
 G.FUNCS.super_reroll_shop = function(e) 
     stop_use()
     ease_dollars(-G.GAME.current_round.super_reroll_cost)
-    G.GAME.current_round.super_reroll_cost = (G.GAME.current_round.super_reroll_cost or 10) + 5
+    G.GAME.current_round.super_reroll_cost = (G.GAME.current_round.super_reroll_cost or 6) + 4
     G.CONTROLLER.locks.shop_reroll = true
     if G.CONTROLLER:save_cardarea_focus('shop_booster') and G.CONTROLLER:save_cardarea_focus('special_card') then G.CONTROLLER.interrupt.focus = true end
     G.E_MANAGER:add_event(Event({

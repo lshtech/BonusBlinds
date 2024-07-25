@@ -28,6 +28,20 @@ position = 'before'
 payload = '''
 if G.GAME.blind:get_type() == 'Bonus' then
     bonus_end_of_round(G.GAME.blind.config.bonus)
+end
+if G.consumeables then
+    for i, j in ipairs(G.consumeables.cards) do
+        if (j.config.center.key == "c_bb_sharehold") then
+            j.ability.reward.dollars = math.min(15, math.floor(pseudorandom(pseudoseed("stocks")) * 31) - 15)
+            if j.ability.reward.dollars < 0 then
+                local balance = "-$" .. tostring(-1 * j.ability.reward.dollars)
+                card_eval_status_text(j, 'jokers', nil, nil, nil, {colour = G.C.RED, message = balance})
+            else
+                local balance = "$" .. tostring(j.ability.reward.dollars)
+                card_eval_status_text(j, 'jokers', nil, nil, nil, {colour = G.C.MONEY, message = balance})
+            end
+        end
+    end
 end'''
 match_indent = true
 
