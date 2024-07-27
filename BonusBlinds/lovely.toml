@@ -302,3 +302,42 @@ payload = '''if G.GAME.blind and ((not G.GAME.blind.disabled) and ((G.GAME.blind
 match_indent = true
 overwrite = true
 
+[[patches]]
+[patches.pattern]
+target = 'card.lua'
+pattern = '''badges[#badges + 1] = 'negative_playing_card''''
+position = 'after'
+payload = '''           elseif self.edition.type == 'bb_antichrome' then
+            badges[#badges + 1] = 'loc_antichrome_' .. tostring(self.edition.antichrome_rounds)'''
+match_indent = false
+
+[[patches]]
+[patches.pattern]
+target = 'functions/common_events.lua'
+pattern = '''if v == 'rental' then info_queue[#info_queue+1] = {key = 'rental', set = 'Other', vars = {G.GAME.rental_rate or 1}} end'''
+position = 'after'
+payload = '''if v == 'loc_antichrome_3' then info_queue[#info_queue+1] = {key = 'antichrome_3', set = 'Other'} end
+if v == 'loc_antichrome_2' then info_queue[#info_queue+1] = {key = 'antichrome_2', set = 'Other'} end
+if v == 'loc_antichrome_1' then info_queue[#info_queue+1] = {key = 'antichrome_1', set = 'Other'} end
+if v == 'loc_antichrome_0' then info_queue[#info_queue+1] = {key = 'antichrome_0', set = 'Other'} end'''
+match_indent = true
+
+[[patches]]
+[patches.pattern]
+target = 'functions/state_events.lua'
+pattern = '''G.jokers.cards[i]:calculate_perishable()'''
+position = 'after'
+payload = '''G.jokers.cards[i]:calculate_antichrome()'''
+match_indent = true
+
+[[patches]]
+[patches.pattern]
+target = 'functions/UI_definitions.lua'
+pattern = '''pinned_left = G.C.ORANGE,'''
+position = 'after'
+payload = '''loc_antichrome_3 = G.C.DARK_EDITION,
+loc_antichrome_2 = G.C.DARK_EDITION,
+loc_antichrome_1 = G.C.DARK_EDITION,
+loc_antichrome_0 = G.C.DARK_EDITION,'''
+match_indent = true
+

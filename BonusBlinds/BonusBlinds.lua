@@ -4,7 +4,7 @@
 --- PREFIX: bb
 --- MOD_AUTHOR: [mathguy]
 --- MOD_DESCRIPTION: Bonus Blinds
---- VERSION: 1.4.0
+--- VERSION: 1.4.1
 ----------------------------------------------
 ------------MOD CODE -------------------------
 
@@ -562,7 +562,7 @@ SMODS.Bonus {
     end
 }
 
---- Uncommon (10)
+--- Uncommon (11)
 
 SMODS.Bonus {
     key = 'redo',
@@ -988,7 +988,32 @@ SMODS.Bonus {
     end
 }
 
---- Rare (4)
+SMODS.Bonus {
+    key = 'eternal',
+    loc_txt = {
+        name = "Eternal Blind",
+        text = {
+            "Play {C:red}#1#{} with",
+            "{C:blue}X3 Blind Size{}"
+        }
+    },
+    atlas = "another",
+    pos = {x = 6, y = 2},
+    cost = 3,
+    rarity = 'Uncommon',
+    set_ability = function(self, card, initial, delay_sprites)
+        card.ability.the_blind = 'bl_bb_infinity'
+    end,
+    loc_vars = function(self, info_queue, card)
+        info_queue[#info_queue+1] = {key = 'blind_infinity', set = 'Other'}
+        return {vars = {localize{type ='name_text', key = card.ability.the_blind, set = 'Blind'}}}
+    end,
+    use2 =function(self, card, area, copier)
+        bonus_selection(card.ability.the_blind, {blind_mult = 3})
+    end
+}
+
+--- Rare (5)
 
 SMODS.Bonus {
     key = 'luck',
@@ -1098,6 +1123,63 @@ SMODS.Bonus {
     loc_vars = function(self, info_queue, card)
         info_queue[#info_queue+1] = {key = 'blind_ox', set = 'Other'}
         return {vars = {localize{type ='name_text', key = card.ability.the_blind, set = 'Blind'}}}
+    end,
+    use2 = function(self, card, area, copier)
+        bonus_selection(card.ability.the_blind, card.ability.reward)
+    end
+}
+
+SMODS.Bonus {
+    key = 'celestial',
+    loc_txt = {
+        name = "Celestial Blind",
+        text = {
+            "Play {C:attention}#1#{} to upgrade",
+            "your {C:attention}most played hand{} by",
+            "{C:attention}#3#{} levels",
+            "{s:0.8,C:inactive}(Most Played Hand: {s:0.8,C:attention}#2#{s:0.8,C:inactive})"
+        }
+    },
+    atlas = "another",
+    pos = {x = 7, y = 2},
+    rarity = 'Rare',
+    cost = 5,
+    set_ability = function(self, card, initial, delay_sprites)
+        card.ability.the_blind = 'bl_arm'
+        card.ability.reward = {planet_levels = {hand = ((G and G.GAME and G.GAME.current_round and G.GAME.current_round.most_played_poker_hand) or localize('ph_most_played')), amount = 4}}
+    end,
+    loc_vars = function(self, info_queue, card)
+        info_queue[#info_queue+1] = {key = 'blind_arm', set = 'Other'}
+        return {vars = {localize{type ='name_text', key = card.ability.the_blind, set = 'Blind'}, localize(G.GAME.current_round.most_played_poker_hand, 'poker_hands'), 4}}
+    end,
+    use2 = function(self, card, area, copier)
+        bonus_selection(card.ability.the_blind, card.ability.reward)
+    end
+}
+
+SMODS.Bonus {
+    key = 'autumn',
+    loc_txt = {
+        name = "Autumn Blind",
+        text = {
+            "Defeat {C:green}#1#{} to get",
+            "an {C:attention}#2#{} and {C:attention}#3#{}",
+        }
+    },
+    atlas = "another",
+    pos = {x = 8, y = 2},
+    rarity = 'Rare',
+    cost = 5,
+    set_ability = function(self, card, initial, delay_sprites)
+        card.ability.the_blind = 'bl_final_leaf'
+        card.ability.reward = {tags = {'tag_bb_poly_negative', 'tag_rare'}}
+    end,
+    loc_vars = function(self, info_queue, card)
+        info_queue[#info_queue+1] = {key = 'blind_verdant', set = 'Other'}
+        info_queue[#info_queue+1] = {key = 'tag_poly_negative', set = 'Other'}
+        info_queue[#info_queue+1] = {key = 'antichrome_3', set = 'Other'}
+        info_queue[#info_queue+1] = {key = 'tag_rare', set = 'Tag'}
+        return {vars = {localize{type ='name_text', key = card.ability.the_blind, set = 'Blind'}, localize{type ='name_text', key = card.ability.reward.tags[1], set = 'Tag'}, localize{type ='name_text', key = card.ability.reward.tags[2], set = 'Tag'}}}
     end,
     use2 = function(self, card, area, copier)
         bonus_selection(card.ability.the_blind, card.ability.reward)
@@ -1332,6 +1414,47 @@ SMODS.Tag {
     end
 }
 
+SMODS.Tag {
+    key = 'poly_negative',
+    atlas = 'bonus_tags',
+    loc_txt = {
+        name = "Antichrome Tag",
+        text = {
+            "Next base edition shop",
+            "Joker is free and",
+            "becomes {C:dark_edition}Antichrome"
+        }
+    },
+    name = "Antichrome Tag",
+    pos = {x = 3, y = 0},
+    apply = function(tag, context)
+        local _applied = nil
+        if not context.card.edition and not context.card.temp_edition and context.card.ability.set == 'Joker' then
+            local lock = tag.ID
+            G.CONTROLLER.locks[lock] = true
+            context.card.temp_edition = true
+            tag:yep('+', G.C.DARK_EDITION,function() 
+                context.card.temp_edition = nil
+                context.card:set_edition({bb_antichrome = true}, true)
+                context.card.ability.couponed = true
+                context.card:set_cost()
+                G.CONTROLLER.locks[lock] = nil
+                return true
+            end)
+            _applied = true
+        end
+        return _applied
+    end,
+    in_pool = function(self)
+        return false
+    end,
+    loc_vars = function(self, info_queue, tag)
+        info_queue[#info_queue+1] = {key = 'antichrome_3', set = 'Other'}
+        return {}
+    end,
+    config = {type = 'store_joker_modify'}
+}
+
 SMODS.Voucher {
     key = 'bonus1',
     loc_txt = {
@@ -1531,6 +1654,42 @@ SMODS.Back {
     end
 }
 
+SMODS.Shader {
+    key = 'antichrome',
+    path = 'antichrome.fs'
+}
+
+SMODS.Edition {
+    key = 'antichrome',
+    shader = 'antichrome',
+    loc_txt = {
+        name = "Antichrome",
+        label = "Antichrome",
+        text = {
+            "{C:attention}+2{} Joker Slots",
+            "for {C:attention}3{} rounds",
+            "{X:mult,C:white} X2 {} Mult"
+        }
+    },
+    extra_cost = 8,
+    config = {
+        x_mult = 2,
+        card_limit = 2,
+        antichrome_rounds = 3,
+    }
+}
+
+function Card:calculate_antichrome()
+    if self.edition and self.edition.bb_antichrome and self.edition.antichrome_rounds > 0 then
+        self.edition.antichrome_rounds = self.edition.antichrome_rounds - 1
+        if (self.edition.antichrome_rounds == 0) and self.added_to_deck then
+            G.jokers.config.card_limit = G.jokers.config.card_limit - 2
+            self.edition.card_limit = 0
+        end
+        card_eval_status_text(self, 'extra', nil, nil, nil, {message = localize{type='variable',key='a_remaining',vars={self.edition.antichrome_rounds}},colour = G.C.FILTER, delay = 0.45})
+    end
+end
+
 ----- Blinds ---
 
 SMODS.Atlas({ key = "blinds", atlas_table = "ANIMATION_ATLAS", path = "blinds.png", px = 34, py = 34, frames = 21 })
@@ -1636,6 +1795,29 @@ SMODS.Blind {
         m = tostring(m)
         return {vars = {m .. ":" .. s .. "." .. d}}
     end,
+}
+
+SMODS.Blind {
+    loc_txt = {
+        name = 'The Infinity',
+        text = { '+1 hand when', 'hand played' }
+    },
+    key = 'infinity',
+    name = 'The Infinity',
+    config = {},
+    boss = {min = 1, max = 10, bonus = true},
+    boss_colour = HEX("C7D14D"),
+    atlas = "blinds",
+    pos = { x = 0, y = 2},
+    vars = {},
+    dollars = 5,
+    mult = 2,
+    in_pool = function(self)
+        return false
+    end,
+    press_play = function(self)
+        ease_hands_played(1)
+    end
 }
 
 SMODS.Atlas({ key = "cool_shop", atlas_table = "ANIMATION_ATLAS", path = "cool_shop.png", px = 113, py = 57, frames = 4 })
@@ -1978,6 +2160,21 @@ function bonus_reward(bonusData)
     if bonusData.dollars then
         ease_dollars(bonusData.dollars)
     end
+    if bonusData.planet_levels then
+        update_hand_text({delay = 0}, {
+            mult = G.GAME.hands[bonusData.planet_levels.hand].mult,
+            chips = G.GAME.hands[bonusData.planet_levels.hand].chips,
+            level = G.GAME.hands[bonusData.planet_levels.hand].level,
+            handname = bonusData.planet_levels.hand
+        })
+        level_up_hand(nil, bonusData.planet_levels.hand, nil, bonusData.planet_levels.amount)
+        update_hand_text({delay = 0}, {
+            mult = 0,
+            chips = 0,
+            level = '', 
+            handname = '',
+        })
+    end
 end
 
 function bonus_end_of_round(bonusData)
@@ -2074,7 +2271,7 @@ function SMODS.current_mod.process_loc_text()
     G.localization.descriptions.Other["blind_ox"].text = localize{type = 'raw_descriptions', key = 'bl_ox', set = 'Blind', vars = {localize('ph_most_played')}}
     G.localization.descriptions.Other["blind_window"] = {}
     G.localization.descriptions.Other["blind_window"].name = localize{type ='name_text', key = 'bl_window', set = 'Blind'}
-    G.localization.descriptions.Other["blind_window"].text = localize{type = 'raw_descriptions', key = 'bl_window', set = 'Blind', vars = {localize('ph_most_played')}}
+    G.localization.descriptions.Other["blind_window"].text = localize{type = 'raw_descriptions', key = 'bl_window', set = 'Blind', vars = {}}
     G.localization.descriptions.Other["t_nope"] = {}
     G.localization.descriptions.Other["t_nope"].name = "Zero Tag"
     G.localization.descriptions.Other["t_nope"].text = { "Convert the next", "selected {C:attention}Tag{} into", "a {C:attention}Null Tag{}" }
@@ -2083,7 +2280,35 @@ function SMODS.current_mod.process_loc_text()
     G.localization.descriptions.Other["t_null"].text = { "{C:inactive}Does nothing?" }
     G.localization.descriptions.Other["blind_tooth"] = {}
     G.localization.descriptions.Other["blind_tooth"].name = localize{type ='name_text', key = 'bl_tooth', set = 'Blind'}
-    G.localization.descriptions.Other["blind_tooth"].text = localize{type = 'raw_descriptions', key = 'bl_tooth', set = 'Blind', vars = {localize('ph_most_played')}}
+    G.localization.descriptions.Other["blind_tooth"].text = localize{type = 'raw_descriptions', key = 'bl_tooth', set = 'Blind', vars = {}}
+    G.localization.descriptions.Other["blind_infinity"] = {}
+    G.localization.descriptions.Other["blind_infinity"].text = { '+1 hand when', 'hand played' }
+    G.localization.descriptions.Other["blind_infinity"].name = "The Infinity"
+    G.localization.descriptions.Other["blind_arm"] = {}
+    G.localization.descriptions.Other["blind_arm"].name = localize{type ='name_text', key = 'bl_arm', set = 'Blind'}
+    G.localization.descriptions.Other["blind_arm"].text = localize{type = 'raw_descriptions', key = 'bl_arm', set = 'Blind', vars = {}}
+    G.localization.descriptions.Other["antichrome_3"] = {}
+    G.localization.descriptions.Other["antichrome_3"].text = { "{C:attention}+2{} Joker Slots", "for {C:attention}3{} rounds", "{X:mult,C:white} X2 {} Mult" }
+    G.localization.descriptions.Other["antichrome_3"].name = "Antichrome"
+    G.localization.descriptions.Other["antichrome_2"] = {}
+    G.localization.descriptions.Other["antichrome_2"].text = { "{C:attention}+2{} Joker Slots", "for {C:attention}2{} rounds", "{X:mult,C:white} X2 {} Mult" }
+    G.localization.descriptions.Other["antichrome_2"].name = "Antichrome"
+    G.localization.descriptions.Other["antichrome_1"] = {}
+    G.localization.descriptions.Other["antichrome_1"].text = { "{C:attention}+2{} Joker Slots", "for {C:attention}1{} round", "{X:mult,C:white} X2 {} Mult" }
+    G.localization.descriptions.Other["antichrome_1"].name = "Antichrome"
+    G.localization.descriptions.Other["antichrome_0"] = {}
+    G.localization.descriptions.Other["antichrome_0"].text = { "{X:mult,C:white} X2 {} Mult" }
+    G.localization.descriptions.Other["antichrome_0"].name = "Antichrome"
+    G.localization.descriptions.Other["blind_verdant"] = {}
+    G.localization.descriptions.Other["blind_verdant"].name = localize{type ='name_text', key = 'bl_final_leaf', set = 'Blind'}
+    G.localization.descriptions.Other["blind_verdant"].text = localize{type = 'raw_descriptions', key = 'bl_final_leaf', set = 'Blind', vars = {}}
+    G.localization.descriptions.Other["tag_poly_negative"] = {}
+    G.localization.descriptions.Other["tag_poly_negative"].name = "Antichrome Tag"
+    G.localization.descriptions.Other["tag_poly_negative"].text = { "Next base edition shop", "Joker is free and", "becomes {C:dark_edition}Antichrome" }
+    G.localization.misc.labels["loc_antichrome_3"] = "Antichrome"
+    G.localization.misc.labels["loc_antichrome_2"] = "Antichrome"
+    G.localization.misc.labels["loc_antichrome_1"] = "Antichrome"
+    G.localization.misc.labels["loc_antichrome_0"] = "Antichrome"
     -- G.localization.descriptions.Other["ed_negative_consumable"] = {}
     -- G.localization.descriptions.Other["ed_negative_consumable"].name = localize{type ='name_text', key = 'e_negative_consumable', set = 'Edition'}
     -- G.localization.descriptions.Other["ed_negative_consumable"].text = localize{type = 'raw_descriptions', key = 'e_negative_consumable', set = 'Edition', vars = {1}}
