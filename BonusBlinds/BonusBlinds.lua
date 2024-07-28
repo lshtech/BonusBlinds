@@ -165,6 +165,7 @@ SMODS.Bonus = SMODS.Consumable:extend {
             local card2 = copy_card(card)
             G.pack_cards:remove_card(card)
             card:remove()
+            card2:add_to_deck()
             G.consumeables:emplace(card2)
         else
             self:use2(card, area, copier)
@@ -786,9 +787,9 @@ SMODS.Bonus {
             bonus_selection(blind, {emp_jkr = 1, tags = card.ability.reward.tags})
         elseif common == 'roulette' then
             if pseudorandom("roulette") < G.GAME.probabilities.normal/3 then
-                bonus_selection(card.ability.the_blind, {ante_mod = 1, tags = card.ability.reward.tags})
+                bonus_selection('bl_big', {ante_mod = 1, tags = card.ability.reward.tags})
             else
-                bonus_selection(card.ability.the_blind, {tags = card.ability.reward.tags})
+                bonus_selection('bl_big', {tags = card.ability.reward.tags})
             end
         elseif common == 'void' then
             local tags0 = {}
@@ -796,7 +797,7 @@ SMODS.Bonus {
                 table.insert(tags0, j)
             end
             table.insert(tags0, 'tag_bb_zero')
-            bonus_selection(card.ability.the_blind, {tags = tags0})
+            bonus_selection('bl_window', {tags = tags0})
         end
     end
 }
@@ -1013,7 +1014,7 @@ SMODS.Bonus {
     end
 }
 
---- Rare (5)
+--- Rare (6)
 
 SMODS.Bonus {
     key = 'luck',
@@ -1478,6 +1479,9 @@ SMODS.Voucher {
             else
                 G.GAME.bonus_rate = 2*self.config.rate
             end
+            if G.GAME.modifiers.more_bonus_blinds then
+                G.GAME.bonus_rate = 7*G.GAME.bonus_rate
+            end
         return true end }))
     end
 }
@@ -1505,6 +1509,9 @@ SMODS.Voucher {
                 G.GAME.bonus_rate = 10*self.config.rate
             else
                 G.GAME.bonus_rate = 2*self.config.rate
+            end
+            if G.GAME.modifiers.more_bonus_blinds then
+                G.GAME.bonus_rate = 7*G.GAME.bonus_rate
             end
         return true end }))
     end
@@ -1654,6 +1661,22 @@ SMODS.Back {
     end
 }
 
+SMODS.Back {
+    name = "Deck of Anti-Mult",
+    key = "antimult_deck",
+	config = {cry_force_edition = 'bb_antichrome'},
+	pos = {x = 0, y = 0},
+	loc_txt = {
+        name = "Deck of Anti-Mult",
+        text = {
+            "Start with a deck",
+            "of {C:attention}Antichrome Cards{}",
+            "Cards cannot change editions"
+        }
+    },
+    dependencies = { "Cryptid" }
+}
+
 SMODS.Shader {
     key = 'antichrome',
     path = 'antichrome.fs'
@@ -1682,9 +1705,18 @@ SMODS.Edition {
 function Card:calculate_antichrome()
     if self.edition and self.edition.bb_antichrome and self.edition.antichrome_rounds > 0 then
         self.edition.antichrome_rounds = self.edition.antichrome_rounds - 1
-        if (self.edition.antichrome_rounds == 0) and self.added_to_deck then
-            G.jokers.config.card_limit = G.jokers.config.card_limit - 2
-            self.edition.card_limit = 0
+        if (self.edition.antichrome_rounds == 0) and (self.added_to_deck or (self.area ~= G.jokers)) then
+            if self.area == G.jokers then
+                G.jokers.config.card_limit = G.jokers.config.card_limit - 2
+            elseif self.area == G.consumeables then
+                G.consumeables.config.card_limit = G.consumeables.config.card_limit - 2
+            elseif self.area == G.hand then
+                G.hand.config.card_limit = G.hand.config.card_limit - 2
+                if G.hand.config.real_card_limit then
+                    G.hand.config.real_card_limit = G.hand.config.real_card_limit - 2
+                end
+            end
+            self.edition.card_limit = nil
         end
         card_eval_status_text(self, 'extra', nil, nil, nil, {message = localize{type='variable',key='a_remaining',vars={self.edition.antichrome_rounds}},colour = G.C.FILTER, delay = 0.45})
     end
@@ -2299,6 +2331,30 @@ function SMODS.current_mod.process_loc_text()
     G.localization.descriptions.Other["antichrome_0"] = {}
     G.localization.descriptions.Other["antichrome_0"].text = { "{X:mult,C:white} X2 {} Mult" }
     G.localization.descriptions.Other["antichrome_0"].name = "Antichrome"
+    G.localization.descriptions.Other["antichrome_c_3"] = {}
+    G.localization.descriptions.Other["antichrome_c_3"].text = { "{C:attention}+2{} Consumable Slots", "for {C:attention}3{} rounds", "{X:mult,C:white} X2 {} Mult" }
+    G.localization.descriptions.Other["antichrome_c_3"].name = "Antichrome"
+    G.localization.descriptions.Other["antichrome_c_2"] = {}
+    G.localization.descriptions.Other["antichrome_c_2"].text = { "{C:attention}+2{} Consumable Slots", "for {C:attention}2{} rounds", "{X:mult,C:white} X2 {} Mult" }
+    G.localization.descriptions.Other["antichrome_c_2"].name = "Antichrome"
+    G.localization.descriptions.Other["antichrome_c_1"] = {}
+    G.localization.descriptions.Other["antichrome_c_1"].text = { "{C:attention}+2{} Consumable Slots", "for {C:attention}1{} round", "{X:mult,C:white} X2 {} Mult" }
+    G.localization.descriptions.Other["antichrome_c_1"].name = "Antichrome"
+    G.localization.descriptions.Other["antichrome_c_0"] = {}
+    G.localization.descriptions.Other["antichrome_c_0"].text = { "{X:mult,C:white} X2 {} Mult" }
+    G.localization.descriptions.Other["antichrome_c_0"].name = "Antichrome"
+    G.localization.descriptions.Other["antichrome_p_3"] = {}
+    G.localization.descriptions.Other["antichrome_p_3"].text = { "{C:attention}+2{} Hand Size", "for {C:attention}3{} rounds", "{X:mult,C:white} X2 {} Mult" }
+    G.localization.descriptions.Other["antichrome_p_3"].name = "Antichrome"
+    G.localization.descriptions.Other["antichrome_p_2"] = {}
+    G.localization.descriptions.Other["antichrome_p_2"].text = { "{C:attention}+2{} Hand Size", "for {C:attention}2{} rounds", "{X:mult,C:white} X2 {} Mult" }
+    G.localization.descriptions.Other["antichrome_p_2"].name = "Antichrome"
+    G.localization.descriptions.Other["antichrome_p_1"] = {}
+    G.localization.descriptions.Other["antichrome_p_1"].text = { "{C:attention}+2{} Hand Size", "for {C:attention}1{} round", "{X:mult,C:white} X2 {} Mult" }
+    G.localization.descriptions.Other["antichrome_p_1"].name = "Antichrome"
+    G.localization.descriptions.Other["antichrome_p_0"] = {}
+    G.localization.descriptions.Other["antichrome_p_0"].text = { "{X:mult,C:white} X2 {} Mult" }
+    G.localization.descriptions.Other["antichrome_p_0"].name = "Antichrome"
     G.localization.descriptions.Other["blind_verdant"] = {}
     G.localization.descriptions.Other["blind_verdant"].name = localize{type ='name_text', key = 'bl_final_leaf', set = 'Blind'}
     G.localization.descriptions.Other["blind_verdant"].text = localize{type = 'raw_descriptions', key = 'bl_final_leaf', set = 'Blind', vars = {}}
@@ -2309,6 +2365,17 @@ function SMODS.current_mod.process_loc_text()
     G.localization.misc.labels["loc_antichrome_2"] = "Antichrome"
     G.localization.misc.labels["loc_antichrome_1"] = "Antichrome"
     G.localization.misc.labels["loc_antichrome_0"] = "Antichrome"
+    G.localization.misc.labels["loc_antichrome_c_3"] = "Antichrome"
+    G.localization.misc.labels["loc_antichrome_c_2"] = "Antichrome"
+    G.localization.misc.labels["loc_antichrome_c_1"] = "Antichrome"
+    G.localization.misc.labels["loc_antichrome_c_0"] = "Antichrome"
+    G.localization.misc.labels["loc_antichrome_p_3"] = "Antichrome"
+    G.localization.misc.labels["loc_antichrome_p_2"] = "Antichrome"
+    G.localization.misc.labels["loc_antichrome_p_1"] = "Antichrome"
+    G.localization.misc.labels["loc_antichrome_p_0"] = "Antichrome"
+    G.localization.misc.challenge_names["c_one_for_all"] = "One for All"
+    G.localization.misc.v_text.ch_c_only_boss = {"No {C:attention}Small Blinds{} or {C:attention}Big Blinds{}."}
+    G.localization.misc.v_text.ch_c_more_bonus_blinds = {"{C:red}Bonus Blinds{} show up {C:attention}7x{} more often."}
     -- G.localization.descriptions.Other["ed_negative_consumable"] = {}
     -- G.localization.descriptions.Other["ed_negative_consumable"].name = localize{type ='name_text', key = 'e_negative_consumable', set = 'Edition'}
     -- G.localization.descriptions.Other["ed_negative_consumable"].text = localize{type = 'raw_descriptions', key = 'e_negative_consumable', set = 'Edition', vars = {1}}
@@ -2669,6 +2736,44 @@ G.FUNCS.super_can_reroll = function(e)
         --e.children[2].children[2].config.shadow = true
     end
 end
+
+----------Challenge---------------
+
+table.insert(G.CHALLENGES,#G.CHALLENGES+1,
+{name = 'One for All',
+    id = 'c_one_for_all',
+    rules = {
+        custom = {
+            {id = 'only_boss'},
+            {id = 'more_bonus_blinds'}
+        },
+        modifiers = {
+        }
+    },
+    jokers = {      
+        {id = 'j_joker'}, 
+    },
+    consumeables = {
+        {id = 'c_bb_broken'},
+        {id = 'c_bb_meta'},
+    },
+    vouchers = {
+        {id = 'v_bb_bonus1'},
+        {id = 'v_bb_bonus2'},
+    },
+    deck = {
+        type = 'Challenge Deck',
+    },
+    restrictions = {
+        banned_cards = {
+        },
+        banned_tags = {
+        },
+        banned_other = {
+        }
+    }
+}
+)
 
 ----------------------------------------------
 ------------MOD CODE END----------------------
