@@ -4,7 +4,7 @@
 --- PREFIX: bb
 --- MOD_AUTHOR: [mathguy]
 --- MOD_DESCRIPTION: Bonus Blinds
---- VERSION: 1.4.2
+--- VERSION: 1.4.1
 ----------------------------------------------
 ------------MOD CODE -------------------------
 
@@ -158,7 +158,7 @@ SMODS.Bonus = SMODS.Consumable:extend {
         badges[#badges + 1] = create_badge(self.rarity, colours[self.rarity], nil, size)
     end,
     can_use = function(self, card)
-        return ((not not G.blind_select) and (G.STATE ~= G.STATES.BUFFOON_PACK) and (G.STATE ~= G.STATES.TAROT_PACK) and (G.STATE ~= G.STATES.SPECTRAL_PACK) and (G.STATE ~= G.STATES.STANDARD_PACK) and (G.STATE ~= G.STATES.PLANET_PACK)) or ((card.area == G.pack_cards) and (#G.consumeables.cards < (G.consumeables.config.card_limit + ((card.edition and card.edition.negative) and 1 or 0))))
+        return ((not not G.blind_select) and (G.STATE ~= G.STATES.BUFFOON_PACK) and (G.STATE ~= G.STATES.TAROT_PACK) and (G.STATE ~= G.STATES.SPECTRAL_PACK) and (G.STATE ~= G.STATES.STANDARD_PACK) and (G.STATE ~= G.STATES.PLANET_PACK)) or ((card.area == G.pack_cards) and (#G.consumeables.cards < (G.consumeables.config.card_limit + ((card.edition and card.edition.negative) and 1 or 0) + ((card.edition and card.edition.bb_antichrome) and 2 or 0))))
     end,
     use = function(self, card, area, copier)
         if area == G.pack_cards then
@@ -563,6 +563,37 @@ SMODS.Bonus {
     end
 }
 
+SMODS.Bonus {
+    key = 'blend',
+    loc_txt = {
+        name = "Blended Blind",
+        text = {
+            "Play a {C:attention}Boss Blind{} with",
+            "{C:blue}X#1# Blind Size{}, {C:attention}-#2#{} Hand Size",
+            "and {C:red}-#3#{} Discards"
+        }
+    },
+    atlas = "another",
+    pos = {x = 9, y = 2},
+    rarity = 'Common',
+    set_ability = function(self, card, initial, delay_sprites)
+        card.ability.reward = {blind_mult = 1.4, discards_mod = -1, hand_size = -1}
+    end,
+    loc_vars = function(self, info_queue, card)
+        return {vars = {card.ability.reward.blind_mult, -card.ability.reward.discards_mod, -card.ability.reward.hand_size}}
+    end,
+    use2 =function(self, card, area, copier)
+        local rngpick = {}
+        for i, j in pairs(G.P_BLINDS) do
+            if (i ~= "bl_water") and j.boss and not j.boss.showdown and not j.boss.bonus then
+                table.insert(rngpick, i)
+            end
+        end
+        local blind = pseudorandom_element(rngpick, pseudoseed('bonus'))
+        bonus_selection(blind, card.ability.reward)
+    end
+}
+
 --- Uncommon (11)
 
 SMODS.Bonus {
@@ -723,7 +754,7 @@ SMODS.Bonus {
         return {vars = {localize{type ='name_text', key = card.ability.reward.tags[1], set = 'Tag'}}}
     end,
     use2 =function(self, card, area, copier)
-        local commons = {'extra', 'needy', 'sail', 'locked', 'fixed', 'combo', 'brick', 'watching', 'sky', 'cruel', 'void'}
+        local commons = {'extra', 'needy', 'sail', 'locked', 'fixed', 'combo', 'brick', 'watching', 'sky', 'cruel', 'void', 'weak', 'blend'}
         if (G.GAME.round_resets.ante ~= G.GAME.win_ante) and (G.GAME.round_resets.ante ~= (G.GAME.win_ante - 1)) then
             table.insert(commons, 'roulette')
         end
@@ -798,6 +829,17 @@ SMODS.Bonus {
             end
             table.insert(tags0, 'tag_bb_zero')
             bonus_selection('bl_window', {tags = tags0})
+        elseif common == 'weak' then
+            bonus_selection('bl_small', {hands_mod = -1, discards_mod = -1 , tags = card.ability.reward.tags})
+        elseif common == 'blend' then
+            local rngpick = {}
+            for i, j in pairs(G.P_BLINDS) do
+                if (i ~= "bl_water") and j.boss and not j.boss.showdown and not j.boss.bonus then
+                    table.insert(rngpick, i)
+                end
+            end
+            local blind = pseudorandom_element(rngpick, pseudoseed('bonus'))
+            bonus_selection(blind, {blind_mult = 1.4, discards_mod = -1, hand_size = -1, tags = card.ability.reward.tags})
         end
     end
 }
@@ -1534,6 +1576,45 @@ SMODS.Joker {
     blueprint_compat = false
 }
 
+SMODS.Joker {
+    key = 'handy',
+    name = "Handy Joker",
+    loc_txt = {
+        name = "Handy Joker",
+        text = {
+            "This Joker gains {C:blue}+#1#{} Chips",
+            "per hand played",
+            "{C:inactive}(Currently {C:blue}+#2#{C:inactive})"
+        }
+    },
+    rarity = 2,
+    atlas = 'jokery',
+    pos = {x = 1, y = 0},
+    cost = 5,
+    blueprint_compat = true,
+    config = {extra = {chips = 0, chip_mod = 4}},
+    loc_vars = function(self, info_queue, card)
+        return { vars = {card.ability.extra.chip_mod ,card.ability.extra.chips}}
+    end,
+    calculate = function(self, card, context)
+        if (context.cardarea == G.jokers) and context.before and not context.blueprint then
+            card.ability.extra.chips = card.ability.extra.chips + card.ability.extra.chip_mod   
+            return {
+                message = localize('k_upgrade_ex'),
+                card = card,
+                colour = G.C.CHIPS
+            }
+        end
+        if context.joker_main then
+            return {
+                message = localize{type='variable',key='a_chips',vars={card.ability.extra.chips}},
+                chip_mod = card.ability.extra.chips, 
+                colour = G.C.CHIPS
+            }
+        end
+    end
+}
+
 SMODS.Booster {
    key = 'blind_normal_1',
    atlas = 'boostery',
@@ -1979,12 +2060,12 @@ end
 
 function bonus_start_effect(bonusData)
     if bonusData.blind_size_mod then
-        G.GAME.blind.chips = G.GAME.blind.chips + bonusData.blind_size_mod
+        G.GAME.blind.chips = math.floor(G.GAME.blind.chips + bonusData.blind_size_mod)
         G.GAME.blind.chip_text = number_format(G.GAME.blind.chips)
     end
     if bonusData.blind_mult then
         G.GAME.blind.mult = G.GAME.blind.mult * bonusData.blind_mult
-        G.GAME.blind.chips = G.GAME.blind.chips * bonusData.blind_mult
+        G.GAME.blind.chips = math.floor(G.GAME.blind.chips * bonusData.blind_mult)
         G.GAME.blind.chip_text = number_format(G.GAME.blind.chips)
     end
     if bonusData.hands then
@@ -2002,8 +2083,8 @@ function bonus_start_effect(bonusData)
         ease_discard(bonusData.discards-G.GAME.current_round.discards_left + (G.GAME.blind.discards_sub or 0))
     end
     if bonusData.discards_mod then
-        if (G.GAME.current_round.discards_left + bonusData.hands_mod) >= 0 then
-            ease_discard(bonusData.hands_mod)
+        if (G.GAME.current_round.discards_left + bonusData.discards_mod) >= 0 then
+            ease_discard(bonusData.discards_mod)
         end
     end
     if bonusData.ante_mod then
@@ -2463,6 +2544,16 @@ function Game:update(dt)
                 G.GAME.blind.config.timing = G.GAME.blind.config.timing and math.max(0, (G.GAME.blind.config.timing) - dt) or nil
                 G.GAME.blind:set_text()
             end
+        end
+    end
+end
+
+local old_select = G.FUNCS.can_select_card
+G.FUNCS.can_select_card = function(e)
+    if e.config.button == nil then
+        if e.config.ref_table.edition and e.config.ref_table.edition.bb_antichrome then
+            e.config.colour = G.C.GREEN
+            e.config.button = 'use_card'
         end
     end
 end
