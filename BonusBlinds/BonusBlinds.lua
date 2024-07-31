@@ -4,7 +4,7 @@
 --- PREFIX: bb
 --- MOD_AUTHOR: [mathguy]
 --- MOD_DESCRIPTION: Bonus Blinds
---- VERSION: 1.4.1
+--- VERSION: 1.5
 ----------------------------------------------
 ------------MOD CODE -------------------------
 
@@ -133,9 +133,9 @@ local bonusType = SMODS.ConsumableType {
     collection_rows = { 6, 6 },
     shop_rate = 2,
     rarities = {
-        {key = 'Common', rate = 100},
-        {key = 'Uncommon', rate = 25},
-        {key = 'Rare', rate = 5},
+        {key = 'Common', rate = 75},
+        {key = 'Uncommon', rate = 20},
+        {key = 'Rare', rate = 4},
         {key = 'Legendary', rate = 1},
     },
     default = "c_bb_extra"
@@ -158,7 +158,8 @@ SMODS.Bonus = SMODS.Consumable:extend {
         badges[#badges + 1] = create_badge(self.rarity, colours[self.rarity], nil, size)
     end,
     can_use = function(self, card)
-        return ((not not G.blind_select) and (G.STATE ~= G.STATES.BUFFOON_PACK) and (G.STATE ~= G.STATES.TAROT_PACK) and (G.STATE ~= G.STATES.SPECTRAL_PACK) and (G.STATE ~= G.STATES.STANDARD_PACK) and (G.STATE ~= G.STATES.PLANET_PACK)) or ((card.area == G.pack_cards) and (#G.consumeables.cards < (G.consumeables.config.card_limit + ((card.edition and card.edition.negative) and 1 or 0) + ((card.edition and card.edition.bb_antichrome) and 2 or 0))))
+        return ((not not G.blind_select) and (G.STATE ~= G.STATES.BUFFOON_PACK) and (G.STATE ~= G.STATES.TAROT_PACK) and (G.STATE ~= G.STATES.SPECTRAL_PACK) and (G.STATE ~= G.STATES.STANDARD_PACK) and (G.STATE ~= G.STATES.PLANET_PACK) and (G.STATE ~= G.STATES.SMODS_BOOSTER_OPENED))
+        or ((card.area == G.pack_cards) and (#G.consumeables.cards < (G.consumeables.config.card_limit + ((card.edition and card.edition.negative) and 1 or 0) + ((card.edition and card.edition.bb_antichrome) and 2 or 0))))
     end,
     use = function(self, card, area, copier)
         if area == G.pack_cards then
@@ -196,7 +197,7 @@ local unknown = SMODS.UndiscoveredSprite {
     pos = {x = 0, y = 0}
 }
 
---- Common (13)
+--- Common (14)
 
 SMODS.Bonus {
     key = 'extra',
@@ -234,7 +235,7 @@ SMODS.Bonus {
         ease_dollars(-card.ability.reward.dollars)
     end,
     can_use = function(self, card)
-        return ((not not G.blind_select) and ((G.GAME.dollars  - G.GAME.bankrupt_at) >= card.ability.reward.dollars) and (G.STATE ~= G.STATES.BUFFOON_PACK) and (G.STATE ~= G.STATES.TAROT_PACK) and (G.STATE ~= G.STATES.SPECTRAL_PACK) and (G.STATE ~= G.STATES.STANDARD_PACK) and (G.STATE ~= G.STATES.PLANET_PACK)) or ((card.area == G.pack_cards) and (#G.consumeables.cards < (G.consumeables.config.card_limit + ((card.edition and card.edition.negative) and 1 or 0))))
+        return ((not not G.blind_select) and ((G.GAME.dollars  - G.GAME.bankrupt_at) >= card.ability.reward.dollars) and (G.STATE ~= G.STATES.BUFFOON_PACK) and (G.STATE ~= G.STATES.TAROT_PACK) and (G.STATE ~= G.STATES.SPECTRAL_PACK) and (G.STATE ~= G.STATES.STANDARD_PACK) and (G.STATE ~= G.STATES.PLANET_PACK) and (G.STATE ~= G.STATES.SMODS_BOOSTER_OPENED)) or ((card.area == G.pack_cards) and (#G.consumeables.cards < (G.consumeables.config.card_limit + ((card.edition and card.edition.negative) and 1 or 0))))
     end
 }
 
@@ -259,7 +260,7 @@ SMODS.Bonus {
     use2 =function(self, card, area, copier)
         local rngpick = {}
         for i, j in pairs(G.P_BLINDS) do
-            if j.boss and not j.boss.showdown and (i ~= 'bl_needle') and not j.boss.bonus then
+            if j.boss and not j.boss.showdown and (i ~= 'bl_needle') and (i ~= 'bl_water') and (i ~= 'bl_cry_tax') and (i ~= 'bl_cruel_tide') and not j.boss.bonus then
                 table.insert(rngpick, i)
             end
         end
@@ -289,7 +290,7 @@ SMODS.Bonus {
     use2 =function(self, card, area, copier)
         local rngpick = {}
         for i, j in pairs(G.P_BLINDS) do
-            if j.boss and not j.boss.showdown and (i ~= 'bl_water') and not j.boss.bonus then
+            if j.boss and not j.boss.showdown and (i ~= 'bl_water') and (i ~= 'bl_needle') and (i ~= 'bl_cruel_sword') and (i ~= 'bl_cruel_sink') and not j.boss.bonus then
                 table.insert(rngpick, i)
             end
         end
@@ -427,8 +428,8 @@ SMODS.Bonus {
     loc_txt = {
         name = "Sky-High Blind",
         text = {
-            "Play {C:blue}#1#{} with {C:attention}double{}",
-            "your {C:attention}best hand{} added to {C:blue}Blind Size{}",
+            "Play {C:blue}#1#{} with your",
+            "{C:attention}best hand{} added to {C:blue}Blind Size{}",
             "{C:inactive}(Best Hand:{}{C:attention} #2#{}{C:inactive}){}"
         }
     },
@@ -444,7 +445,7 @@ SMODS.Bonus {
         return {vars = {localize{type ='name_text', key = card.ability.the_blind, set = 'Blind'}, best}}
     end,
     use2 =function(self, card, area, copier)
-        bonus_selection(card.ability.the_blind, {blind_size_mod = ((G.GAME and G.GAME.round_scores and (G.GAME.round_scores.hand.amt * 2)) or 0)})
+        bonus_selection(card.ability.the_blind, {blind_size_mod = ((G.GAME and G.GAME.round_scores and (G.GAME.round_scores.hand.amt)) or 0)})
     end
 }
 
@@ -508,7 +509,7 @@ SMODS.Bonus {
     end,
     can_use = function(self, card)
         local cond = (G.GAME.round_resets.ante ~= G.GAME.win_ante) and (G.GAME.round_resets.ante ~= (G.GAME.win_ante - 1))
-        return ((not not G.blind_select) and (cond) and (G.STATE ~= G.STATES.BUFFOON_PACK) and (G.STATE ~= G.STATES.TAROT_PACK) and (G.STATE ~= G.STATES.SPECTRAL_PACK) and (G.STATE ~= G.STATES.STANDARD_PACK) and (G.STATE ~= G.STATES.PLANET_PACK)) or ((card.area == G.pack_cards) and (#G.consumeables.cards < (G.consumeables.config.card_limit + ((card.edition and card.edition.negative) and 1 or 0))))
+        return ((not not G.blind_select) and (cond) and (G.STATE ~= G.STATES.BUFFOON_PACK) and (G.STATE ~= G.STATES.TAROT_PACK) and (G.STATE ~= G.STATES.SPECTRAL_PACK) and (G.STATE ~= G.STATES.STANDARD_PACK) and (G.STATE ~= G.STATES.PLANET_PACK) and (G.STATE ~= G.STATES.SMODS_BOOSTER_OPENED)) or ((card.area == G.pack_cards) and (#G.consumeables.cards < (G.consumeables.config.card_limit + ((card.edition and card.edition.negative) and 1 or 0))))
     end
 }
 
@@ -591,6 +592,36 @@ SMODS.Bonus {
         end
         local blind = pseudorandom_element(rngpick, pseudoseed('bonus'))
         bonus_selection(blind, card.ability.reward)
+    end
+}
+
+SMODS.Bonus {
+    key = 'blind',
+    loc_txt = {
+        name = "Blind Blind",
+        text = {
+            "Play a {C:attention}Boss Blind{} with",
+            "{C:attention}half{} of cards drawn",
+            "{C:attention}face down{}"
+        }
+    },
+    atlas = "another",
+    pos = {x = 11, y = 2},
+    rarity = 'Common',
+    set_ability = function(self, card, initial, delay_sprites)
+    end,
+    loc_vars = function(self, info_queue, card)
+        return {vars = {}}
+    end,
+    use2 = function(self, card, area, copier)
+        local rngpick = {}
+        for i, j in pairs(G.P_BLINDS) do
+            if j.boss and not j.boss.showdown and not j.boss.bonus then
+                table.insert(rngpick, i)
+            end
+        end
+        local blind = pseudorandom_element(rngpick, pseudoseed('bonus'))
+        bonus_selection(blind, {face_down = 0.5})
     end
 }
 
@@ -754,7 +785,7 @@ SMODS.Bonus {
         return {vars = {localize{type ='name_text', key = card.ability.reward.tags[1], set = 'Tag'}}}
     end,
     use2 =function(self, card, area, copier)
-        local commons = {'extra', 'needy', 'sail', 'locked', 'fixed', 'combo', 'brick', 'watching', 'sky', 'cruel', 'void', 'weak', 'blend'}
+        local commons = {'extra', 'needy', 'sail', 'locked', 'fixed', 'combo', 'brick', 'watching', 'sky', 'cruel', 'void', 'weak', 'blend', 'blind'}
         if (G.GAME.round_resets.ante ~= G.GAME.win_ante) and (G.GAME.round_resets.ante ~= (G.GAME.win_ante - 1)) then
             table.insert(commons, 'roulette')
         end
@@ -772,7 +803,7 @@ SMODS.Bonus {
         elseif common == 'needy' then
             local rngpick = {}
             for i, j in pairs(G.P_BLINDS) do
-                if j.boss and not j.boss.showdown and not j.boss.bonus and (i ~= 'bl_needle') then
+                if j.boss and not j.boss.showdown and not j.boss.bonus and (i ~= 'bl_needle') and (i ~= 'bl_water') and (i ~= 'bl_cry_tax') and (i ~= 'bl_cruel_tide') then
                     table.insert(rngpick, i)
                 end
             end
@@ -781,7 +812,7 @@ SMODS.Bonus {
         elseif common == 'sail' then
             local rngpick = {}
             for i, j in pairs(G.P_BLINDS) do
-                if j.boss and not j.boss.showdown and (i ~= 'bl_water') and not j.boss.bonus then
+                if j.boss and not j.boss.showdown and (i ~= 'bl_water') and (i ~= 'bl_needle') and (i ~= 'bl_cruel_sword') and (i ~= 'bl_cruel_sink') and not j.boss.bonus then
                     table.insert(rngpick, i)
                 end
             end
@@ -840,6 +871,15 @@ SMODS.Bonus {
             end
             local blind = pseudorandom_element(rngpick, pseudoseed('bonus'))
             bonus_selection(blind, {blind_mult = 1.4, discards_mod = -1, hand_size = -1, tags = card.ability.reward.tags})
+        elseif common == 'blind' then
+            local rngpick = {}
+            for i, j in pairs(G.P_BLINDS) do
+                if j.boss and not j.boss.showdown and not j.boss.bonus then
+                    table.insert(rngpick, i)
+                end
+            end
+            local blind = pseudorandom_element(rngpick, pseudoseed('bonus'))
+            bonus_selection(blind, {face_down = 0.5, tags = card.ability.reward.tags})
         end
     end
 }
@@ -905,7 +945,7 @@ SMODS.Bonus {
         }
     end,
     can_use = function(self, card)
-        return ((not not G.blind_select) and (G.GAME.last_blind and not not G.GAME.last_blind.key) and (G.STATE ~= G.STATES.BUFFOON_PACK) and (G.STATE ~= G.STATES.TAROT_PACK) and (G.STATE ~= G.STATES.SPECTRAL_PACK) and (G.STATE ~= G.STATES.STANDARD_PACK) and (G.STATE ~= G.STATES.PLANET_PACK)) or ((card.area == G.pack_cards) and (#G.consumeables.cards < (G.consumeables.config.card_limit + ((card.edition and card.edition.negative) and 1 or 0))))
+        return ((not not G.blind_select) and (G.GAME.last_blind and not not G.GAME.last_blind.key) and (G.STATE ~= G.STATES.BUFFOON_PACK) and (G.STATE ~= G.STATES.TAROT_PACK) and (G.STATE ~= G.STATES.SPECTRAL_PACK) and (G.STATE ~= G.STATES.STANDARD_PACK) and (G.STATE ~= G.STATES.PLANET_PACK) and (G.STATE ~= G.STATES.SMODS_BOOSTER_OPENED)) or ((card.area == G.pack_cards) and (#G.consumeables.cards < (G.consumeables.config.card_limit + ((card.edition and card.edition.negative) and 1 or 0))))
     end
 }
 
@@ -1056,7 +1096,7 @@ SMODS.Bonus {
     end
 }
 
---- Rare (6)
+--- Rare (7)
 
 SMODS.Bonus {
     key = 'luck',
@@ -1084,7 +1124,7 @@ SMODS.Bonus {
     use2 = function(self, card, area, copier)
         local rngpick = {}
         for i, j in pairs(G.P_BLINDS) do
-            if (not j.boss or not j.boss.showdown) and not (j.boss and j.boss.bonus) then
+            if (i ~= "bl_water") and (i ~= "bl_needle") and (i ~= "bl_cruel_tide") and (i ~= "bl_cruel_sword") and (i ~= "bl_cry_tax") and (not j.boss or not j.boss.showdown) and not (j.boss and j.boss.bonus) then
                 table.insert(rngpick, i)
             end
         end
@@ -1226,6 +1266,42 @@ SMODS.Bonus {
     end,
     use2 = function(self, card, area, copier)
         bonus_selection(card.ability.the_blind, card.ability.reward)
+    end
+}
+
+SMODS.Bonus {
+    key = 'travel',
+    loc_txt = {
+        name = "Travel Blind",
+        text = {
+            "Play {C:attention}#1#{}. {C:green}#2# in #3#{}",
+            "chance for {C:attention}-#4#{} Ante.",
+            "{C:inactive}(unusable on ante {C:attention}#5#{C:inactive})",
+            "{s:0.8,C:inactive}Suggested by humplydinkle"
+        }
+    },
+    atlas = "another",
+    pos = {x = 10, y = 2},
+    rarity = 'Rare',
+    cost = 5,
+    set_ability = function(self, card, initial, delay_sprites)
+        card.ability.the_blind = 'bl_pillar'
+        card.ability.ante_mod = 1
+    end,
+    loc_vars = function(self, info_queue, card)
+        info_queue[#info_queue+1] = {key = 'blind_pillar', set = 'Other'}
+        return {vars = {localize{type ='name_text', key = card.ability.the_blind, set = 'Blind'}, G.GAME.probabilities.normal, 5, 1, 1}}
+    end,
+    use2 = function(self, card, area, copier)
+        if pseudorandom("roulette") < G.GAME.probabilities.normal/5 then
+            bonus_selection(card.ability.the_blind, {ante_mod = -card.ability.ante_mod})
+        else
+            bonus_selection(card.ability.the_blind, {none = true})
+        end
+    end,
+    can_use = function(self, card)
+        local cond = (G.GAME.round_resets.ante ~= 1)
+        return ((not not G.blind_select) and (cond) and (G.STATE ~= G.STATES.BUFFOON_PACK) and (G.STATE ~= G.STATES.TAROT_PACK) and (G.STATE ~= G.STATES.SPECTRAL_PACK) and (G.STATE ~= G.STATES.STANDARD_PACK) and (G.STATE ~= G.STATES.PLANET_PACK) and (G.STATE ~= G.STATES.SMODS_BOOSTER_OPENED)) or ((card.area == G.pack_cards) and (#G.consumeables.cards < (G.consumeables.config.card_limit + ((card.edition and card.edition.negative) and 1 or 0))))
     end
 }
 
@@ -2260,7 +2336,7 @@ function bonus_reward(bonusData)
             play_sound('polychrome1', 1.2, 0.7)
         elseif val < 5/6 then
             add_tag(Tag('tag_ethereal'))
-            add_tag(Tag('tag_ironic'))
+            add_tag(Tag('tag_bb_ironic'))
         else
             add_tag(Tag('tag_voucher'))
             add_tag(Tag('tag_voucher'))
@@ -2457,6 +2533,9 @@ function SMODS.current_mod.process_loc_text()
     G.localization.misc.challenge_names["c_one_for_all"] = "One for All"
     G.localization.misc.v_text.ch_c_only_boss = {"No {C:attention}Small Blinds{} or {C:attention}Big Blinds{}."}
     G.localization.misc.v_text.ch_c_more_bonus_blinds = {"{C:red}Bonus Blinds{} show up {C:attention}7x{} more often."}
+    G.localization.descriptions.Other["blind_pillar"] = {}
+    G.localization.descriptions.Other["blind_pillar"].name = localize{type ='name_text', key = 'bl_pillar', set = 'Blind'}
+    G.localization.descriptions.Other["blind_pillar"].text = localize{type = 'raw_descriptions', key = 'bl_pillar', set = 'Blind', vars = {}}
     -- G.localization.descriptions.Other["ed_negative_consumable"] = {}
     -- G.localization.descriptions.Other["ed_negative_consumable"].name = localize{type ='name_text', key = 'e_negative_consumable', set = 'Edition'}
     -- G.localization.descriptions.Other["ed_negative_consumable"].text = localize{type = 'raw_descriptions', key = 'e_negative_consumable', set = 'Edition', vars = {1}}

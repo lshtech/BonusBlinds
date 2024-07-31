@@ -416,3 +416,17 @@ if args.challenge and (args.challenge.rules.custom[1].id == 'only_boss') then G.
 if args.challenge and (args.challenge.rules.custom[1].id == 'only_boss') then G.GAME.round_resets.blind_states.Big = 'Hide' end
 if args.challenge and (args.challenge.rules.custom[2].id == 'more_bonus_blinds') then G.GAME.bonus_rate = 14 end'''
 match_indent = true
+
+[[patches]]
+[patches.pattern]
+target = 'blind.lua'
+pattern = '''function Blind:stay_flipped(area, card)'''
+position = 'after'
+payload = '''   if G.GAME.blind.config.bonus and G.GAME.blind.config.bonus.face_down then
+        if area == G.hand then
+            if pseudorandom(pseudoseed('wheel')) < G.GAME.blind.config.bonus.face_down then
+                return true
+            end
+        end
+    end'''
+match_indent = true
