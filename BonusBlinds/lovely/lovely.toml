@@ -32,7 +32,7 @@ end
 if G.consumeables then
     for i, j in ipairs(G.consumeables.cards) do
         if (j.config.center.key == "c_bb_sharehold") then
-            j.ability.reward.dollars = math.min(15, math.floor(pseudorandom(pseudoseed("stocks")) * 31) - 15)
+            j.ability.reward.dollars = math.min(j.ability.max_reward, math.floor(pseudorandom(pseudoseed("stocks")) * (j.ability.min_reward + j.ability.max_reward + 1)) - j.ability.min_reward)
             if j.ability.reward.dollars < 0 then
                 local balance = "-$" .. tostring(-1 * j.ability.reward.dollars)
                 card_eval_status_text(j, 'jokers', nil, nil, nil, {colour = G.C.RED, message = balance})
@@ -105,10 +105,14 @@ pattern = '''function Blind:press_play()'''
 position = 'after'
 payload = '''   if G.GAME.blind.config.bonus and G.GAME.blind.config.bonus.spectrals then
         G.E_MANAGER:add_event(Event({ func = function()
-            local card = create_card('Spectral',G.consumeables, nil, nil, nil, nil, nil, 'nature')
-            card:set_edition({negative = true}, true)
-            card:add_to_deck()
-            G.consumeables:emplace(card)
+            local i0 = 1
+            while (i0 <= G.GAME.blind.config.bonus.spectrals) do
+                local card = create_card('Spectral',G.consumeables, nil, nil, nil, nil, nil, 'nature')
+                card:set_edition({negative = true}, true)
+                card:add_to_deck()
+                G.consumeables:emplace(card)
+                i0 = i0 + 1
+            end
         return true end })) 
         delay(0.6)
     end'''
@@ -429,4 +433,13 @@ payload = '''   if G.GAME.blind.config.bonus and G.GAME.blind.config.bonus.face_
             end
         end
     end'''
+match_indent = true
+
+[[patches]]
+[patches.pattern]
+target = 'card.lua'
+pattern = '''if self.area and self.ability.couponed and (self.area == G.shop_jokers or self.area == G.shop_booster) then self.cost = 0 end'''
+position = 'after'
+payload = '''if self.area and self.ability.reduced_price and (self.area == G.special_card) then self.cost = math.ceil(self.cost * 0.7) end
+if self.area and self.ability.couponed and (self.area == G.special_card) then self.cost = 0 end'''
 match_indent = true
