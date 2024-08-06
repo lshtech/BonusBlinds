@@ -4,7 +4,7 @@
 --- PREFIX: bb
 --- MOD_AUTHOR: [mathguy]
 --- MOD_DESCRIPTION: Bonus Blinds
---- VERSION: 1.5.4
+--- VERSION: 1.5.5
 ----------------------------------------------
 ------------MOD CODE -------------------------
 
@@ -1199,7 +1199,7 @@ SMODS.Bonus {
     loc_txt = {
         name = "Hankercheif Blind",
         text = {
-            "Play {C:attention}#1#{}. Earn {C:money}$#2${} when",
+            "Play {C:attention}#1#{}. Earn {C:money}$#2#{} when",
             "a playing card is scored",
         }
     },
