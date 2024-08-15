@@ -1241,7 +1241,7 @@ SMODS.Bonus {
     end,
     loc_vars = function(self, info_queue, card)
         info_queue[#info_queue+1] = {key = 'blind_arm', set = 'Other'}
-        return {vars = {localize{type ='name_text', key = card.ability.the_blind, set = 'Blind'}, localize(G.GAME.current_round.most_played_poker_hand, 'poker_hands'), card.ability.reward.amount}}
+        return {vars = {localize{type ='name_text', key = card.ability.the_blind, set = 'Blind'}, localize(G.GAME.current_round.most_played_poker_hand, 'poker_hands'), card.ability.reward.planet_levels.amount}}
     end,
     use2 = function(self, card, area, copier)
         bonus_selection(card.ability.the_blind, card.ability.reward)
