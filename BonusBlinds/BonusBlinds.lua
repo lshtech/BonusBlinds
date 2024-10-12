@@ -2651,6 +2651,7 @@ end
 
 local old_select = G.FUNCS.can_select_card
 G.FUNCS.can_select_card = function(e)
+    old_select(e)
     if e.config.button == nil then
         if e.config.ref_table.edition and e.config.ref_table.edition.bb_antichrome then
             e.config.colour = G.C.GREEN
