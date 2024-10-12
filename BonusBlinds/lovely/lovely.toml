@@ -450,7 +450,7 @@ target = 'card.lua'
 pattern = '''if G.consumeables.cards[1] then'''
 position = 'at'
 payload = '''if G.GAME.disable_perkeo then
-    G.GAME.disable_perkeo = nil
+    
 elseif G.consumeables.cards[1] then'''
 match_indent = true
 
@@ -460,4 +460,12 @@ target = "functions/common_events.lua"
 pattern = "if _c.set == 'Other' then"
 position = "before"
 payload = '''if card and card.ability and card.ability.no_perkeo then info_queue[#info_queue+1] = {key = 'perkeo_note2', set = 'Other'} end'''
+match_indent = true
+
+[[patches]]
+[patches.pattern]
+target = 'functions/button_callbacks.lua'
+pattern = '''G.CONTROLLER.locks.toggle_shop = nil'''
+position = 'after'
+payload = '''G.GAME.disable_perkeo = nil'''
 match_indent = true
