@@ -162,7 +162,7 @@ SMODS.Bonus = SMODS.Consumable:extend {
         or ((card.area == G.pack_cards) and (#G.consumeables.cards < (G.consumeables.config.card_limit + ((card.edition and card.edition.negative) and 1 or 0) + ((card.edition and card.edition.bb_antichrome) and 2 or 0))))
     end,
     use = function(self, card, area, copier)
-        if area == G.pack_cards then
+        if (area == G.pack_cards) and (G.pack_cards ~= nil) then
             local card2 = copy_card(card)
             G.pack_cards:remove_card(card)
             card:remove()
